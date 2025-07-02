@@ -11,7 +11,7 @@ public class MangaRenderTarget : TargetRules
 		Type = TargetType.Program;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 		LinkType = TargetLinkType.Monolithic;
-		LaunchModuleName = "AppicationProgram";
+		LaunchModuleName = "MangaRender";
 
 		// Lean and mean
 		bBuildDeveloperTools = false;
