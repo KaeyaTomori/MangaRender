@@ -10,7 +10,14 @@ public class MangaRender : ModuleRules
 		PrivateDependencyModuleNames.Add("Core");
 		PrivateDependencyModuleNames.Add("Projects");
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore", "StandaloneRenderer" });
+		PrivateDependencyModuleNames.AddRange(
+			new string[]
+			{
+				"Slate",
+				"SlateCore",
+				"StandaloneRenderer", 
+				"DesktopPlatform",
+			});
 		// to link with CoreUObject module:
 		// PrivateDependencyModuleNames.Add("CoreUObject");
 
