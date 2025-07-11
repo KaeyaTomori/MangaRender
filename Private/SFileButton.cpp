@@ -12,29 +12,12 @@ FReply SFileButton::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerE
 {
 	AsyncTask(ENamedThreads::GameThread, []()
 	{
-		// FString path = FileManager::GetInstance()->PickFolder();
+		FString path = FileManager::PickFolder();
 		// UE_LOG(LogTemp, Warning, TEXT(":%s"), *path);
-		// FileManager::GetInstance()->OpenAllFileInFolder(path);
+		auto manager = FileManager::getInstance();
+		FileManager::GetAllFileInFolder(path, manager->FileNames);
+		manager->isDirty = true;
+		
 	});
 	return SButton::OnMouseButtonUp(MyGeometry, MouseEvent);
 }
-
-// 	// OPENFILENAME ofn = {0};
-	// 	// TCHAR szFile[MAX_PATH] = {0};
-	// 	//
-	// 	// ofn.lStructSize = sizeof(ofn);
-	// 	// ofn.lpstrFile = szFile; // 存储路径的缓冲区
-	// 	// ofn.nMaxFile = MAX_PATH;
-	// 	// ofn.lpstrFilter = L"文本文件(*.jpg)\0*.jpg\0所有文件(*.*)\0*.*\0"; // 文件类型过滤
-	// 	// ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST; // 路径和文件必须存在
-	// 	// ofn.lpTemplateName = L"default";
-	// 	//
-	// 	// // if (GetOpenFileName(&ofn)) {
-	// 	// // 	UE_LOG(LogTemp, Warning, TEXT(": %s"), szFile);
-	// 	// // }
-	// 	
-	// 	// if (GetSaveFileName(&ofn))
-	// 	// {
-	// 	// 	UE_LOG(LogTemp, Warning, TEXT(": %s"), szFile);
-	// 	// }
-	// 	

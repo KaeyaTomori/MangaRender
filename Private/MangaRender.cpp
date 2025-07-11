@@ -19,7 +19,7 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 	FSlateApplication::InitializeAsStandaloneApplication(GetStandardStandaloneRenderer());
 	FSlateApplication::InitHighDPI(true);
 
-	TSharedRef<SWidget> mainWidget = SNew(SMainWidget);
+	TSharedRef<SMainWidget> mainWidget = SNew(SMainWidget);
 	TSharedRef<SWindow> Window = SNew(SWindow)
 	.ClientSize(FVector2D(1080.f, 720.f))
 	[
@@ -30,10 +30,9 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 
 	FTaskGraphInterface::Startup(FPlatformMisc::NumberOfWorkerThreadsToSpawn());
 	FTaskGraphInterface::Get().AttachToThread(ENamedThreads::GameThread);
-
-	// todo: delete
-	FileManager::GetInstance();
 	
+	FileManager::Init();
+
 	while (!IsEngineExitRequested())
 	{
 		BeginExitIfRequested();
@@ -41,6 +40,8 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 		FSlateApplication::Get().PumpMessages();
 		FSlateApplication::Get().Tick();
 		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
+
+		mainWidget.Get().update();
 		FPlatformProcess::Sleep(0.0166f);
 	}
 	

@@ -1,18 +1,22 @@
 #pragma once
 
+#include "IImageWrapperModule.h"
 #include "DesktopPlatformModule.h"
 
 class FileManager
 {
 public:
-	static TSharedPtr<FileManager> GetInstance();
+	static FileManager* getInstance();
+	
+	static FString PickFolder();
+	static bool GetAllFileInFolder(FString Path, TArray<FString>& AllFileNames);
+	static bool GetImageData(const FString& ImagePath, TArray<uint8>& ImgData, int32& Width, int32& Height);
+	static void Init();
 
-	FString PickFolder();
-	static TSharedPtr<FSlateBrush> OpenAllFileInFolder(FString Path);
-
-	TSharedPtr<FSlateBrush> testImg;
+	FString OpenPath;
+	TArray<FString> FileNames;
+	bool isDirty = false;
 	
 private:
-	FileManager();
-	// UTexture2D* LoadTexture2DFromFile(const FString& FilePath);
+	// 图像包装模块
 };
