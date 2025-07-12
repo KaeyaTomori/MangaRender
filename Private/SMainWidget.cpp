@@ -1,10 +1,11 @@
 #include "SMainWidget.h"
 
-#include "FileManager.h"
+#include "DataManager.h"
 #include "SFileButton.h"
 
 SMainWidget::SMainWidget()
 {
+	data = DataManager::getInstance();
 }
 
 SMainWidget::~SMainWidget()
@@ -14,7 +15,6 @@ SMainWidget::~SMainWidget()
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SMainWidget::Construct(const FArguments& InArgs)
 {
-	// "D:/acg/111426387_p0.jpg"
 	ChildSlot
 	[
 		SNew(SOverlay)
@@ -22,7 +22,19 @@ void SMainWidget::Construct(const FArguments& InArgs)
 		.HAlign(HAlign_Center)
 		.VAlign(VAlign_Center)
 		[
-			SAssignNew(imageWidgetL, SImageWidget)
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.FillWidth(0.5f)
+			[
+				SAssignNew(imageWidgetL, SImageWidget)
+				.ImageAlignment(EImageAlignment::RIGHT)
+			]
+			+ SHorizontalBox::Slot()
+			.FillWidth(0.5f)
+			[
+				SAssignNew(imageWidgetR, SImageWidget)
+				.ImageAlignment(EImageAlignment::LEFT)
+			]
 		]
 		
 		+ SOverlay::Slot()
@@ -58,20 +70,11 @@ FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointe
 	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton)
 	{
-		if (showImageIndex > 0)
-		{
-			showImageIndex--;
-			isImageChange = true;
-		}
-		UE_LOG(LogTemp, Display, TEXT("ThumbMouseButton Clicked"));
+		LastPage();
 	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton2)
 	{
-		{
-			showImageIndex++;
-			isImageChange = true;
-		}
-		UE_LOG(LogTemp, Display, TEXT("ThumbMouseButton2 Clicked"));
+		NextPage();
 	}
 	
 	return FReply::Handled();
@@ -93,6 +96,10 @@ FReply SMainWidget::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent
 		FVector2D delta = MouseEvent.GetCursorDelta();
 		ImageOffset += delta;
 		imageWidgetL.Get()->UpdateMove(ImageOffset);
+		if (imageWidgetR.IsValid())
+		{
+			imageWidgetR.Get()->UpdateMove(ImageOffset);
+		}
 	}
 	
 
@@ -119,11 +126,15 @@ FReply SMainWidget::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEven
 		ZoomFactor = FMath::Clamp(ZoomFactor + wheelDelta * WheelSpeed, 0.1f, 10.f);
 
 		imageWidgetL.Get()->UpdateScroll(RenderPivot, ZoomFactor);
+		if (imageWidgetR.IsValid())
+		{
+			imageWidgetR.Get()->UpdateScroll(RenderPivot, ZoomFactor);
+		}
 	}
 
-	// if (ImageWidget.IsValid())
+	// if (imageWidgetL.IsValid())
 	// {
-	// 	ImageWidget->Invalidate(EInvalidateWidget::Layout);
+	// 	imageWidgetL->Invalidate(EInvalidateWidget::Layout);
 	// }
 	return SCompoundWidget::OnMouseWheel(MyGeometry, MouseEvent);
 }
@@ -132,12 +143,7 @@ FReply SMainWidget::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKe
 {
 	if (InKeyEvent.GetKey() == EKeys::Left)
 	{
-		if (showImageIndex > 0)
-		{
-			showImageIndex--;
-			isImageChange = true;
-		}
-		 
+		LastPage();		 
 	}
 	else if (InKeyEvent.GetKey() == EKeys::Right)
 	{
@@ -149,19 +155,44 @@ FReply SMainWidget::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKe
 	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 }
 
+void SMainWidget::updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex) {
+	if (imageWidget.IsValid())
+	{
+		imageWidget.Get()->update(showIndex);
+		imageWidget.Get()->UpdateScroll(RenderPivot, ZoomFactor);
+		imageWidget.Get()->UpdateMove(ImageOffset);
+	}
+}
+
 void SMainWidget::update()
 {
-	auto manager = FileManager::getInstance();
-	if (isImageChange || manager->isDirty)
+	if (isImageChange || data->isDirty)
 	{
-		manager->isDirty = false;
+		data->isDirty = false;
 		isImageChange = false;
 		ImageOffset = FVector2D::ZeroVector;
 		RenderPivot = FVector2D(0.5f, 0.5f);
 		ZoomFactor = 1.0f;
-		imageWidgetL.Get()->update(manager->FileNames[showImageIndex]);
-		imageWidgetL.Get()->UpdateScroll(RenderPivot, ZoomFactor);
-		imageWidgetL.Get()->UpdateMove(ImageOffset);
+		updateImageWidget(imageWidgetL, showImageIndex);
+		updateImageWidget(imageWidgetR, showImageIndex + 1);
+	}
+}
+
+void SMainWidget::NextPage()
+{
+	if (showImageIndex < data->FileNames.Num() - pageCount)
+	{
+		showImageIndex += pageCount;
+		isImageChange = true;
+	}
+}
+
+void SMainWidget::LastPage()
+{
+	if (showImageIndex > 0)
+	{
+		showImageIndex -= pageCount;
+		isImageChange = true;
 	}
 }
 

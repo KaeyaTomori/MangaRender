@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DataManager.h"
 #include "SImageWidget.h"
 
 class SMainWidget : public SCompoundWidget
@@ -22,7 +23,12 @@ public:
 	virtual FReply OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 
+	void updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex);
 	void update();
+
+private:
+	void NextPage();
+	void LastPage();
 	
 private:
 	FVector2D MousePosition = FVector2D::ZeroVector;
@@ -33,9 +39,12 @@ private:
 	float ZoomFactor = 1.0f;
 
 	TSharedPtr<SImageWidget> imageWidgetL;
+	TSharedPtr<SImageWidget> imageWidgetR;
 
 	bool isImageChange = false;
 	int showImageIndex = 0;
+	int pageCount = 2;
 	/** 图片控件 */
 	TSharedPtr<SImage> ImageWidget;
+	DataManager* data;
 };

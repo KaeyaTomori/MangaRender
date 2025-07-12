@@ -1,9 +1,18 @@
 #pragma once
+#include "DataManager.h"
+
+enum EImageAlignment : int
+{
+	CENTER,
+	LEFT,
+	RIGHT,
+};
 
 class SImageWidget : public SLeafWidget
 {
 public:
 	SLATE_BEGIN_ARGS(SImageWidget){}
+		SLATE_ARGUMENT(EImageAlignment, ImageAlignment)
 	SLATE_END_ARGS()
 	
 public:
@@ -11,7 +20,7 @@ public:
 	~SImageWidget();
 	void Construct(const FArguments& InArgs);
 
-	void update(FString fileName);
+	void update(int showIndex);
 	void UpdateMove(FVector2D imageOffset);
 	void UpdateScroll(FVector2D renderPivot, float zoomFactor);
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
@@ -26,9 +35,13 @@ private:
 	int32 imageWidth = 1080;
 	int32 imageHeight = 720;
 
+	EImageAlignment ImageAlignment = EImageAlignment::CENTER;
+	
 	TSharedPtr<FSlateBrush> Brush;
 	
 	/** 图片控件 */
 	TSharedPtr<SImage> ImageWidget;
 	TSharedPtr<SBox> Box;
+
+	DataManager* data;
 };

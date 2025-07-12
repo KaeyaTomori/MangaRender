@@ -1,9 +1,10 @@
 #include "SImageWidget.h"
 
-#include "FileManager.h"
+#include "Tool/FileManager.h"
 
 SImageWidget::SImageWidget()
 {
+	data = DataManager::getInstance();
 }
 
 SImageWidget::~SImageWidget()
@@ -13,14 +14,12 @@ SImageWidget::~SImageWidget()
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SImageWidget::Construct(const FArguments& InArgs)
 {
-	// Brush = InArgs._Brush;
+	ImageAlignment = InArgs._ImageAlignment;
 }
 
-void SImageWidget::update(FString fileName)
+void SImageWidget::update(int showIndex)
 {
-	TArray<uint8> fileData;
-	FileManager::GetImageData(fileName, fileData, imageWidth, imageHeight);
-	Brush = FSlateDynamicImageBrush::CreateWithImageData(*fileName, FVector2D(imageWidth, imageHeight), fileData);
+	Brush = data->GetBrush(showIndex);
 }
 
 void SImageWidget::UpdateMove(FVector2D imageOffset)
@@ -34,28 +33,61 @@ void SImageWidget::UpdateScroll(FVector2D renderPivot, float zoomFactor)
 	ZoomFactor = zoomFactor;
 }
 
-bool fir = false;
 int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
 	FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
-	if (Brush.IsValid() && !fir)
+	if (Brush.IsValid())
 	{
 		FVector2D ImageSize = Brush->ImageSize;
-	 	FVector2d s = AllottedGeometry.GetLocalSize();;
-		FVector2D LayoutOffset = -ImageSize * 0.5f + s * 0.5f;
+	 	FVector2D windowSize = AllottedGeometry.GetLocalSize();
+		// FVector2D LayoutOffset = -ImageSize * 0.5f + windowSize * 0.5f;
+		FVector2D LayoutOffset(0, -ImageSize.Y * 0.5f + windowSize.Y * 0.5f);
+		FVector2D pivot;
+
+		float xScal = windowSize.X / ImageSize.X;
+		float yScal = windowSize.Y / ImageSize.Y;
+		auto scal = std::min(xScal, yScal) * ZoomFactor;
+
+		switch (ImageAlignment)
+		{
+		case EImageAlignment::LEFT:
+			LayoutOffset.X = 0.f;
+			pivot = FVector2D(0.f, 0.5f);
+			break;
+		case EImageAlignment::RIGHT:
+			LayoutOffset.X = -ImageSize.X + windowSize.X;
+			pivot = FVector2D(1.f, 0.5f);
+			break;
+		case EImageAlignment::CENTER:
+			LayoutOffset.X = -ImageSize.X * 0.5f + windowSize.X * 0.5f;
+			pivot = FVector2D(0.5f, 0.5f);
+			break;
+		}
+		
 		// 可以修改 RenderTransform 来控制位置或缩放
 		FSlateDrawElement::MakeBox(
 			OutDrawElements,
 			LayerId,
 			AllottedGeometry.ToPaintGeometry(
-				FVector2D(imageWidth, imageHeight),
+				Brush->ImageSize,
 				FSlateLayoutTransform(LayoutOffset),
-				FSlateRenderTransform(FScale2D(ZoomFactor), ImageOffset),
-				FVector2D(0.5f, 0.5f)
+				FSlateRenderTransform(FScale2D(scal), ImageOffset),
+				pivot
 				),
 			Brush.Get(),
 			ESlateDrawEffect::None,
 			InWidgetStyle.GetColorAndOpacityTint()
+		);
+	}
+	else
+	{
+		FSlateDrawElement::MakeBox(
+			OutDrawElements,
+			LayerId,
+			AllottedGeometry.ToPaintGeometry(),
+			FAppStyle::Get().GetBrush("WhiteBrush"),
+			ESlateDrawEffect::None,
+			FLinearColor(0.01f, 0.01f, 0.01f)
 		);
 	}
 	return LayerId;

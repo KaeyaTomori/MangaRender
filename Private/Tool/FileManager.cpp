@@ -2,6 +2,8 @@
 
 #include <shobjidl_core.h>
 
+#include "DesktopPlatformModule.h"
+#include "IDesktopPlatform.h"
 #include "IImageWrapper.h"
 #include "IImageWrapperModule.h"
 #include "Modules/ModuleManager.h"
@@ -9,35 +11,9 @@
 
 
 static IDesktopPlatform* platformModule;
-static FileManager* gFileManager;
-
-FileManager* FileManager::getInstance()
-{
-	if (gFileManager == nullptr)
-	{
-		gFileManager = new FileManager();
-	}
-	return gFileManager;
-}
 
 FString FileManager::PickFolder()
 {
-	// FPlatformMisc::CoInitialize();
-	// IFileDialog* pfd;
-	// PWSTR pszPath = NULL;
-	// CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_IFileDialog, (void**)&pfd);
-	// pfd->SetOptions(FOS_PICKFOLDERS);  // 关键：设置为文件夹模式
-	// if (SUCCEEDED(pfd->Show(NULL))) {
-	// 	IShellItem* psi;
-	// 	pfd->GetResult(&psi);
-	// 	psi->GetDisplayName(SIGDN_FILESYSPATH, &pszPath);
-	// 	// 使用pszPath
-	// 	CoTaskMemFree(pszPath);
-	// 	psi->Release();
-	// }
-	// pfd->Release();
-	// FPlatformMisc::CoUninitialize();
-	// return pszPath;
 	FString FolderPath;
 	if (platformModule)
 	{

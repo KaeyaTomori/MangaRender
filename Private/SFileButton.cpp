@@ -4,7 +4,8 @@
 #include <minwindef.h>
 #include <shobjidl_core.h>
 
-#include "FileManager.h"
+#include "DataManager.h"
+#include "Tool/FileManager.h"
 
 	// FPlatformMisc::OsExecute(L"open", L"D:\\acg");
 
@@ -13,11 +14,15 @@ FReply SFileButton::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerE
 	AsyncTask(ENamedThreads::GameThread, []()
 	{
 		FString path = FileManager::PickFolder();
-		// UE_LOG(LogTemp, Warning, TEXT(":%s"), *path);
-		auto manager = FileManager::getInstance();
-		FileManager::GetAllFileInFolder(path, manager->FileNames);
-		manager->isDirty = true;
-		
+		auto data = DataManager::getInstance();
+		data->ClearAllFiles();
+		FileManager::GetAllFileInFolder(path, data->GetFileNamesAndDirty());
+		data->LoadAllImage();
+		// Async(EAsyncExecution::Thread, []()
+		// {
+			// auto data = DataManager::getInstance();
+			// data->LoadAllImage();
+		// });
 	});
 	return SButton::OnMouseButtonUp(MyGeometry, MouseEvent);
 }
