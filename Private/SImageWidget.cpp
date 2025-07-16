@@ -1,7 +1,5 @@
 #include "SImageWidget.h"
 
-#include "Tool/FileManager.h"
-
 SImageWidget::SImageWidget()
 {
 	data = DataManager::getInstance();
@@ -17,20 +15,23 @@ void SImageWidget::Construct(const FArguments& InArgs)
 	ImageAlignment = InArgs._ImageAlignment;
 }
 
-void SImageWidget::update(int showIndex)
+void SImageWidget::update(int showIndex, FVector2D imageOffset, float zoomFactor, FVector2D renderPivot)
 {
 	Brush = data->GetBrush(showIndex);
+	ImageOffset = imageOffset;
+	ZoomFactor = zoomFactor;
+	RenderPivot = renderPivot;
 }
 
-void SImageWidget::UpdateMove(FVector2D imageOffset)
+void SImageWidget::UpdateOffset(FVector2D imageOffset)
 {
 	ImageOffset = imageOffset;
 }
 
-void SImageWidget::UpdateScroll(FVector2D renderPivot, float zoomFactor)
+void SImageWidget::UpdateZoomFactor(float zoomFactor, FVector2D renderPivot)
 {
-	RenderPivot = renderPivot;
 	ZoomFactor = zoomFactor;
+	RenderPivot = renderPivot;
 }
 
 int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
@@ -40,7 +41,6 @@ int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 	{
 		FVector2D ImageSize = Brush->ImageSize;
 	 	FVector2D windowSize = AllottedGeometry.GetLocalSize();
-		// FVector2D LayoutOffset = -ImageSize * 0.5f + windowSize * 0.5f;
 		FVector2D LayoutOffset(0, -ImageSize.Y * 0.5f + windowSize.Y * 0.5f);
 		FVector2D pivot;
 
@@ -51,7 +51,7 @@ int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 		switch (ImageAlignment)
 		{
 		case EImageAlignment::LEFT:
-			LayoutOffset.X = 0.f;
+			LayoutOffset.X = -1.f; // 防黑边
 			pivot = FVector2D(0.f, 0.5f);
 			break;
 		case EImageAlignment::RIGHT:
@@ -64,7 +64,6 @@ int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 			break;
 		}
 		
-		// 可以修改 RenderTransform 来控制位置或缩放
 		FSlateDrawElement::MakeBox(
 			OutDrawElements,
 			LayerId,
@@ -77,17 +76,6 @@ int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 			Brush.Get(),
 			ESlateDrawEffect::None,
 			InWidgetStyle.GetColorAndOpacityTint()
-		);
-	}
-	else
-	{
-		FSlateDrawElement::MakeBox(
-			OutDrawElements,
-			LayerId,
-			AllottedGeometry.ToPaintGeometry(),
-			FAppStyle::Get().GetBrush("WhiteBrush"),
-			ESlateDrawEffect::None,
-			FLinearColor(0.01f, 0.01f, 0.01f)
 		);
 	}
 	return LayerId;

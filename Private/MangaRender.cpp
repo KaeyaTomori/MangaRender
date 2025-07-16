@@ -36,6 +36,7 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 	
 	FileManager::Init();
 
+	// debug:
 	// FileManager::GetAllFileInFolder("D:/acg", data->FileNames);
 	// data->isDirty = true;
 
@@ -48,10 +49,9 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 
 		// do Task
 		FTaskGraphInterface::Get().ProcessThreadUntilIdle(ENamedThreads::GameThread);
-
-		mainWidget.Get().update();
+		
 		FPlatformProcess::Sleep(0.0166f);
-		// FPlatformProcess::Sleep(0.2f);
+		// FPlatformProcess::Sleep(0.5f);
 	}
 	
 	FSlateApplication::Shutdown();

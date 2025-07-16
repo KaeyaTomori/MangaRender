@@ -24,10 +24,10 @@ FString FileManager::PickFolder()
 			FolderPath
 		);
         
-		if (bSuccess && !FolderPath.IsEmpty())
-		{
-			UE_LOG(LogTemp, Log, TEXT("选择的文件夹: %s"), *FolderPath);
-		}
+		// if (bSuccess && !FolderPath.IsEmpty())
+		// {
+		// 	UE_LOG(LogTemp, Log, TEXT("选择的文件夹: %s"), *FolderPath);
+		// }
 	}
 	return FolderPath;
 }

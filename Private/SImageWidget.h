@@ -19,10 +19,11 @@ public:
 	SImageWidget();
 	~SImageWidget();
 	void Construct(const FArguments& InArgs);
-
-	void update(int showIndex);
-	void UpdateMove(FVector2D imageOffset);
-	void UpdateScroll(FVector2D renderPivot, float zoomFactor);
+	
+	void update(int showIndex, FVector2D imageOffset, float zoomFactor, FVector2D renderPivot);
+	void UpdateOffset(FVector2D imageOffset);
+	void UpdateZoomFactor(float zoomFactor, FVector2D renderPivot);
+	
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
 		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
@@ -32,16 +33,10 @@ private:
 	FVector2D ImageOffset = FVector2D::ZeroVector;
 	FVector2D RenderPivot = FVector2D(0.5f, 0.5f);
 	float ZoomFactor = 1.0f;
-	int32 imageWidth = 1080;
-	int32 imageHeight = 720;
 
 	EImageAlignment ImageAlignment = EImageAlignment::CENTER;
 	
 	TSharedPtr<FSlateBrush> Brush;
 	
-	/** 图片控件 */
-	TSharedPtr<SImage> ImageWidget;
-	TSharedPtr<SBox> Box;
-
 	DataManager* data;
 };

@@ -1,11 +1,38 @@
 #include "SMainWidget.h"
 
 #include "DataManager.h"
-#include "SFileButton.h"
+#include "SButtonMenu.h"
+
+static SMainWidget* mainWidget;
+
+void SMainWidget::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	update();
+	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
+}
+
+SMainWidget* SMainWidget::GetInstance()
+{
+	return mainWidget;
+}
+
+void SMainWidget::OnReadModeChanged()
+{
+	if (data->GetReadMode() == EReadMode::SINGLE_PAGE)
+	{
+		data->SwitchReadMode(EReadMode::DOUBLE_PAGE);
+	}
+	else
+	{
+		data->SwitchReadMode(EReadMode::SINGLE_PAGE);
+	}
+	Construct(FArguments());
+}
 
 SMainWidget::SMainWidget()
 {
 	data = DataManager::getInstance();
+	mainWidget = this;
 }
 
 SMainWidget::~SMainWidget()
@@ -15,41 +42,67 @@ SMainWidget::~SMainWidget()
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 void SMainWidget::Construct(const FArguments& InArgs)
 {
-	ChildSlot
-	[
-		SNew(SOverlay)
-		+ SOverlay::Slot()
-		.HAlign(HAlign_Center)
-		.VAlign(VAlign_Center)
+	imageWidgetL = nullptr;
+	imageWidgetR = nullptr;
+
+	if (data->GetReadMode() == EReadMode::SINGLE_PAGE)
+	{
+		ChildSlot
 		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.FillWidth(0.5f)
+			SNew(SOverlay)
+			+ SOverlay::Slot()
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
 			[
-				SAssignNew(imageWidgetL, SImageWidget)
-				.ImageAlignment(EImageAlignment::RIGHT)
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.FillWidth(0.5f)
+				[
+					SAssignNew(imageWidgetL, SImageWidget)
+					.ImageAlignment(EImageAlignment::CENTER)
+				]
 			]
-			+ SHorizontalBox::Slot()
-			.FillWidth(0.5f)
+			
+			+ SOverlay::Slot()
+			.HAlign(HAlign_Left)
+			.VAlign(VAlign_Top)
 			[
-				SAssignNew(imageWidgetR, SImageWidget)
-				.ImageAlignment(EImageAlignment::LEFT)
+				SNew(SButtonMenu)
 			]
-		]
-		
-		+ SOverlay::Slot()
-		.HAlign(HAlign_Left)
-		.VAlign(VAlign_Top)
+		];
+	}
+	else if (data->GetReadMode() == EReadMode::DOUBLE_PAGE)
+	{
+		ChildSlot
 		[
-			SNew(SHorizontalBox)
-			+ SHorizontalBox::Slot()
-			.AutoWidth()
+			SNew(SOverlay)
+			+ SOverlay::Slot()
+			.HAlign(HAlign_Center)
+			.VAlign(VAlign_Center)
 			[
-				SNew(SFileButton)
-				.Text(NSLOCTEXT("L10N", "ButtonContent", "Open Folder"))
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+				.FillWidth(0.5f)
+				[
+					SAssignNew(imageWidgetL, SImageWidget)
+					.ImageAlignment(EImageAlignment::RIGHT)
+				]
+				+ SHorizontalBox::Slot()
+				.FillWidth(0.5f)
+				[
+					SAssignNew(imageWidgetR, SImageWidget)
+					.ImageAlignment(EImageAlignment::LEFT)
+				]
 			]
-		]
-	];
+			
+			+ SOverlay::Slot()
+			.HAlign(HAlign_Left)
+			.VAlign(VAlign_Top)
+			[
+				SNew(SButtonMenu)
+			]
+		];
+	}
 
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
@@ -64,6 +117,7 @@ void SMainWidget::OnMouseLeave(const FPointerEvent& MouseEvent)
 
 FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
+	// UE_LOG(LogTemp, Display, TEXT("OnMouseButtonDown"));
 	if(MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
 		
@@ -95,14 +149,13 @@ FReply SMainWidget::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent
 	{
 		FVector2D delta = MouseEvent.GetCursorDelta();
 		ImageOffset += delta;
-		imageWidgetL.Get()->UpdateMove(ImageOffset);
+		imageWidgetL.Get()->UpdateOffset(ImageOffset);
 		if (imageWidgetR.IsValid())
 		{
-			imageWidgetR.Get()->UpdateMove(ImageOffset);
+			imageWidgetR.Get()->UpdateOffset(ImageOffset);
 		}
 	}
 	
-
 	return FReply::Handled();
 }
 
@@ -112,7 +165,6 @@ FReply SMainWidget::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEven
 	{
 		// 获取鼠标相对于控件的位置（本地坐标）
 		FVector2D LocalMousePosition = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-		// 控件大小
 		FVector2D WidgetSize = MyGeometry.GetLocalSize();
 
 		// 归一化为0~1之间，作为缩放锚点
@@ -125,10 +177,10 @@ FReply SMainWidget::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEven
 		float wheelDelta = MouseEvent.GetWheelDelta();
 		ZoomFactor = FMath::Clamp(ZoomFactor + wheelDelta * WheelSpeed, 0.1f, 10.f);
 
-		imageWidgetL.Get()->UpdateScroll(RenderPivot, ZoomFactor);
+		imageWidgetL.Get()->UpdateZoomFactor(ZoomFactor, RenderPivot);
 		if (imageWidgetR.IsValid())
 		{
-			imageWidgetR.Get()->UpdateScroll(RenderPivot, ZoomFactor);
+			imageWidgetR.Get()->UpdateZoomFactor(ZoomFactor, RenderPivot);
 		}
 	}
 
@@ -147,10 +199,7 @@ FReply SMainWidget::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKe
 	}
 	else if (InKeyEvent.GetKey() == EKeys::Right)
 	{
-		{
-			showImageIndex++;
-			isImageChange = true;
-		}
+		NextPage();
 	}
 	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
 }
@@ -158,41 +207,29 @@ FReply SMainWidget::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKe
 void SMainWidget::updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex) {
 	if (imageWidget.IsValid())
 	{
-		imageWidget.Get()->update(showIndex);
-		imageWidget.Get()->UpdateScroll(RenderPivot, ZoomFactor);
-		imageWidget.Get()->UpdateMove(ImageOffset);
+		imageWidget.Get()->update(showIndex, ImageOffset, ZoomFactor, RenderPivot);
 	}
 }
 
 void SMainWidget::update()
 {
-	if (isImageChange || data->isDirty)
+	if (data->IsDirty())
 	{
-		data->isDirty = false;
-		isImageChange = false;
-		ImageOffset = FVector2D::ZeroVector;
-		RenderPivot = FVector2D(0.5f, 0.5f);
-		ZoomFactor = 1.0f;
-		updateImageWidget(imageWidgetL, showImageIndex);
-		updateImageWidget(imageWidgetR, showImageIndex + 1);
+		data->AlreadyUpdate();
+		ImageOffset = DefaultImageOffset;
+		RenderPivot = DefaultRenderPivot;
+		ZoomFactor = DefaultZoomFactor;
+		updateImageWidget(imageWidgetL, data->GetCurrentImageIndex());
+		updateImageWidget(imageWidgetR, data->GetCurrentImageIndex() + 1);
 	}
 }
 
 void SMainWidget::NextPage()
 {
-	if (showImageIndex < data->FileNames.Num() - pageCount)
-	{
-		showImageIndex += pageCount;
-		isImageChange = true;
-	}
+	data->NextPage();
 }
 
 void SMainWidget::LastPage()
 {
-	if (showImageIndex > 0)
-	{
-		showImageIndex -= pageCount;
-		isImageChange = true;
-	}
+	data->LastPage();
 }
-

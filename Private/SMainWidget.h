@@ -6,14 +6,17 @@
 class SMainWidget : public SCompoundWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SMainWidget){}
+	SLATE_BEGIN_ARGS(SMainWidget) {}
 	SLATE_END_ARGS()
-	
+
+	static SMainWidget* GetInstance();
 public:
 	SMainWidget();
 	~SMainWidget();
 	void Construct(const FArguments& InArgs);
 
+	virtual void Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime) override;
+	
 	// Mouse Event
 	virtual void OnMouseEnter(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual void OnMouseLeave(const FPointerEvent& MouseEvent) override;
@@ -23,6 +26,8 @@ public:
 	virtual FReply OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 
+	void OnReadModeChanged();
+	
 	void updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex);
 	void update();
 
@@ -31,20 +36,18 @@ private:
 	void LastPage();
 	
 private:
-	FVector2D MousePosition = FVector2D::ZeroVector;
-	FVector2D ImageOffset = FVector2D::ZeroVector;
-
-	FVector2D RenderPivot = FVector2D(0.5f, 0.5f);
 	const float WheelSpeed = 0.1f;
-	float ZoomFactor = 1.0f;
+	
+	const FVector2D DefaultImageOffset = FVector2D::ZeroVector;
+	const FVector2D DefaultRenderPivot = FVector2D(0.5f, 0.5f);
+	const float DefaultZoomFactor = 1.0f;
+	
+	FVector2D ImageOffset = DefaultImageOffset;
+	FVector2D RenderPivot = DefaultRenderPivot;
+	float ZoomFactor = DefaultZoomFactor;
 
 	TSharedPtr<SImageWidget> imageWidgetL;
 	TSharedPtr<SImageWidget> imageWidgetR;
 
-	bool isImageChange = false;
-	int showImageIndex = 0;
-	int pageCount = 2;
-	/** 图片控件 */
-	TSharedPtr<SImage> ImageWidget;
 	DataManager* data;
 };
