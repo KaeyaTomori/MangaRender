@@ -8,7 +8,7 @@
 #include "IImageWrapperModule.h"
 #include "Modules/ModuleManager.h"
 #include "HAL/PlatformFileManager.h"
-
+#include "webp/decode.h"
 
 static IDesktopPlatform* platformModule;
 
@@ -32,22 +32,16 @@ FString FileManager::PickFolder()
 	return FolderPath;
 }
 
-bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData, int32& Width, int32& Height)
+bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
 	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-	// 加载文件数据
-	TArray<uint8> FileData;
-	if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
-	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to load file: %s"), *ImagePath);
-		return false;
-	}
+	
 	
 	// 检测图像格式
 	EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(FileData.GetData(), FileData.Num());
 	if (ImageFormat == EImageFormat::Invalid)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Unsupported image format: %s"), *ImagePath);
+		UE_LOG(LogTemp, Error, TEXT("Unsupported image format"));
 		return false;
 	}
 	// 创建图像包装器
@@ -72,12 +66,52 @@ bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData,
 		UE_LOG(LogTemp, Error, TEXT("Failed to GetRaw"));
 		return false;
 	}
+	
 	return true;
+}
+
+bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, int32& Width, int32& Height)
+{
+	UE_LOG(LogTemp, Warning, TEXT("DecodeWebPToTexture"));
+	// Decode WebP to RGBA
+	uint8_t* rawData = WebPDecodeBGRA(FileData.GetData(), FileData.Num(), &Width, &Height);
+	if (!rawData)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to decode WebP data"));
+		return false;
+	}
+
+	int32 dataSize = Width * Height * 4; // 每像素4字节（RGBA）
+	ImgData.Append(rawData, dataSize);
+
+	// 之后你可以释放 rawData
+	WebPFree(rawData);
+	return true;
+}
+
+bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData, int32& Width, int32& Height)
+{
+	// 加载文件数据
+	TArray<uint8> FileData;
+	if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to load file: %s"), *ImagePath);
+		return false;
+	}
+	
+	if (GetImageDataByImageWrapper(FileData, ImgData, Width, Height))
+	{
+		return true;
+	}
+	if (DecodeWebPToTexture(FileData, ImgData, Width, Height))
+	{
+		return true;
+	}
+	return false;
 }
 
 void FileManager::Init()
 {
-	
 	platformModule = FDesktopPlatformModule::Get();
 }
 

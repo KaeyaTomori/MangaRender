@@ -1,12 +1,28 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class MangaRender : ModuleRules
 {
+	private string ModulePath
+	{
+		get { return ModuleDirectory; }
+	}
+
+	private string ThirdPartyPath
+	{
+		get { return Path.GetFullPath(Path.Combine(ModulePath, "ThirdParty")); }
+	}
 	public MangaRender(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PublicIncludePathModuleNames.Add("Launch");
+		PublicIncludePathModuleNames.AddRange(
+			new string[]
+			{
+				"Launch",
+			});
+		PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "webp/include"));
+		PublicAdditionalLibraries.Add(Path.Combine(ThirdPartyPath, "webp/lib", "libwebpdecoder.lib"));
 		PrivateDependencyModuleNames.Add("Core");
 		PrivateDependencyModuleNames.Add("Projects");
 

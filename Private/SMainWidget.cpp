@@ -117,21 +117,24 @@ void SMainWidget::OnMouseLeave(const FPointerEvent& MouseEvent)
 
 FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	// UE_LOG(LogTemp, Display, TEXT("OnMouseButtonDown"));
-	if(MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	UE_LOG(LogTemp, Display, TEXT("OnMouseButtonDown"));
+
+	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		
+		return FReply::Unhandled();
 	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton)
 	{
 		LastPage();
+		return FReply::Handled().PreventThrottling();
 	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton2)
 	{
 		NextPage();
+		return FReply::Handled().PreventThrottling();
 	}
-	
-	return FReply::Handled();
+
+	return FReply::Unhandled();
 }
 
 FReply SMainWidget::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
@@ -202,6 +205,21 @@ FReply SMainWidget::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKe
 		NextPage();
 	}
 	return SCompoundWidget::OnKeyDown(MyGeometry, InKeyEvent);
+}
+
+FReply SMainWidget::OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (InMouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton)
+	{
+		LastPage();
+		return FReply::Handled();
+	}
+	else if (InMouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton2)
+	{
+		NextPage();
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
 }
 
 void SMainWidget::updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex) {
