@@ -36,12 +36,11 @@ bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& Im
 {
 	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
 	
-	
 	// 检测图像格式
 	EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(FileData.GetData(), FileData.Num());
 	if (ImageFormat == EImageFormat::Invalid)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Unsupported image format"));
+		UE_LOG(LogTemp, Warning, TEXT("Unsupported image format"));
 		return false;
 	}
 	// 创建图像包装器
@@ -72,7 +71,7 @@ bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& Im
 
 bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
-	UE_LOG(LogTemp, Warning, TEXT("DecodeWebPToTexture"));
+	UE_LOG(LogTemp, Log, TEXT("Try Decode WebP"));
 
 	uint8_t* rawData = WebPDecodeBGRA(FileData.GetData(), FileData.Num(), &Width, &Height);
 	if (!rawData)
@@ -90,7 +89,6 @@ bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, 
 
 bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
-	// 加载文件数据
 	TArray<uint8> FileData;
 	if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
 	{
