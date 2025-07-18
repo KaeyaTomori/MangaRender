@@ -29,6 +29,18 @@ void SMainWidget::OnReadModeChanged()
 	Construct(FArguments());
 }
 
+void SMainWidget::OnShowDirectionChanged()
+{
+	if (data->GetShowDirection() == LEFT_TO_RIGHT)
+	{
+		data->SwitchShowDirection(RIGHT_TO_LEFT);
+	}
+	else
+	{
+		data->SwitchShowDirection(LEFT_TO_RIGHT);
+	}
+}
+
 SMainWidget::SMainWidget()
 {
 	data = DataManager::getInstance();
@@ -117,8 +129,7 @@ void SMainWidget::OnMouseLeave(const FPointerEvent& MouseEvent)
 
 FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
 {
-	UE_LOG(LogTemp, Display, TEXT("OnMouseButtonDown"));
-
+	// UE_LOG(LogTemp, Display, TEXT("OnMouseButtonDown"));
 	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
 		return FReply::Unhandled();
@@ -126,14 +137,13 @@ FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointe
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton)
 	{
 		LastPage();
-		return FReply::Handled().PreventThrottling();
+		return FReply::Handled();
 	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton2)
 	{
 		NextPage();
-		return FReply::Handled().PreventThrottling();
+		return FReply::Handled();
 	}
-
 	return FReply::Unhandled();
 }
 
@@ -222,6 +232,81 @@ FReply SMainWidget::OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, cons
 	return FReply::Unhandled();
 }
 
+FReply SMainWidget::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	UE_LOG(LogTemp, Display, TEXT("OnDrop"));
+	auto operation = DragDropEvent.GetOperationAs<FExternalDragOperation>();
+	if (operation.IsValid())
+	{
+		const TArray<FString>& DroppedPaths = operation->GetFiles();
+
+		for (const FString& Path : DroppedPaths)
+		{
+			if (FPaths::DirectoryExists(Path))
+			{
+				UE_LOG(LogTemp, Display, TEXT("folder: %s"), *Path);
+				data->OpenFolder(Path);
+			}
+			else if (FPaths::FileExists(Path))
+			{
+				UE_LOG(LogTemp, Display, TEXT("file: %s"), *Path);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("drop unknow type: %s"), *Path);
+			}
+		}
+		bIsDragAccept = false;
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
+}
+
+void SMainWidget::OnDragEnter(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	UE_LOG(LogTemp, Display, TEXT("OnDragEnter"));
+	auto operation = DragDropEvent.GetOperationAs<FExternalDragOperation>();
+	if (operation.IsValid())
+	{
+		const TArray<FString>& DroppedPaths = operation->GetFiles();
+
+		for (const FString& Path : DroppedPaths)
+		{
+			if (FPaths::DirectoryExists(Path))
+			{
+				operation->SetCursorOverride(EMouseCursor::SlashedCircle);
+				bIsDragAccept = true;
+			}
+			else if (FPaths::FileExists(Path))
+			{
+				operation->SetCursorOverride(EMouseCursor::SlashedCircle);
+				bIsDragAccept = true;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Log, TEXT("drag unknow type: %s"), *Path);
+				bIsDragAccept = false;
+			}
+		}
+	}
+	SCompoundWidget::OnDragEnter(MyGeometry, DragDropEvent);
+}
+
+void SMainWidget::OnDragLeave(const FDragDropEvent& DragDropEvent)
+{
+	bIsDragAccept = false;
+	SCompoundWidget::OnDragLeave(DragDropEvent);
+}
+
+FReply SMainWidget::OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent)
+{
+	if (bIsDragAccept)
+	{
+		return FReply::Handled();
+	}
+	return FReply::Unhandled();
+}
+
 void SMainWidget::updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex) {
 	if (imageWidget.IsValid())
 	{
@@ -237,8 +322,9 @@ void SMainWidget::update()
 		ImageOffset = DefaultImageOffset;
 		RenderPivot = DefaultRenderPivot;
 		ZoomFactor = DefaultZoomFactor;
-		updateImageWidget(imageWidgetL, data->GetCurrentImageIndex());
-		updateImageWidget(imageWidgetR, data->GetCurrentImageIndex() + 1);
+		FirstImageToShow = data->GetCurrentImageIndex();
+		updateImageWidget(imageWidgetL, FirstImageToShow + data->GetShowDirection());
+		updateImageWidget(imageWidgetR, FirstImageToShow + (data->GetShowDirection() ^ 1));
 	}
 }
 

@@ -73,7 +73,7 @@ bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& Im
 bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
 	UE_LOG(LogTemp, Warning, TEXT("DecodeWebPToTexture"));
-	// Decode WebP to RGBA
+
 	uint8_t* rawData = WebPDecodeBGRA(FileData.GetData(), FileData.Num(), &Width, &Height);
 	if (!rawData)
 	{
@@ -84,7 +84,6 @@ bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, 
 	int32 dataSize = Width * Height * 4; // 每像素4字节（RGBA）
 	ImgData.Append(rawData, dataSize);
 
-	// 之后你可以释放 rawData
 	WebPFree(rawData);
 	return true;
 }

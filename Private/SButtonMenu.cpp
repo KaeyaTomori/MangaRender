@@ -50,5 +50,19 @@ void SButtonMenu::Construct(const FArguments& InArgs)
 				return FReply::Handled();
 			})
 		]
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		[
+			SNew(SButton)
+			.Text(NSLOCTEXT("L10N", "ButtonContent", "切换左右顺序"))
+			.OnClicked_Lambda([]()->FReply
+			{
+				AsyncTask(ENamedThreads::GameThread, []()
+				{
+					SMainWidget::GetInstance()->OnShowDirectionChanged();
+				});
+				return FReply::Handled();
+			})
+		]
 	];
 }

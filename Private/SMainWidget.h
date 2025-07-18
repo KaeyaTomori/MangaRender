@@ -26,8 +26,14 @@ public:
 	virtual FReply OnMouseWheel(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent) override;
 	virtual FReply OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual FReply OnMouseButtonDoubleClick(const FGeometry& InMyGeometry, const FPointerEvent& InMouseEvent) override;
+	virtual FReply OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
+	virtual void OnDragEnter(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
+	virtual void OnDragLeave(const FDragDropEvent& DragDropEvent) override;
+	virtual FReply OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
+
 
 	void OnReadModeChanged();
+	void OnShowDirectionChanged();
 	
 	void updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex);
 	void update();
@@ -46,9 +52,11 @@ private:
 	FVector2D ImageOffset = DefaultImageOffset;
 	FVector2D RenderPivot = DefaultRenderPivot;
 	float ZoomFactor = DefaultZoomFactor;
-
+	int FirstImageToShow = 0;
 	TSharedPtr<SImageWidget> imageWidgetL;
 	TSharedPtr<SImageWidget> imageWidgetR;
 
 	DataManager* data;
+
+	bool bIsDragAccept = false;
 };

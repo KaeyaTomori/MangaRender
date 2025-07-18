@@ -117,21 +117,31 @@ void DataManager::AlreadyUpdate()
 void DataManager::OpenFolder()
 {
 	FString path = FileManager::PickFolder();
-	ClearAllFiles();
-	FileManager::GetAllFileInFolder(path, FileNames);
-	{
-		FScopeLock Lock(&DataLock);
-		Brushes.SetNumZeroed(FileNames.Num());
-	}
-	LoadAllImage();
+	OpenFolder(path);
 	
 	// LoadImageFirst(2);
 	// ImageLoader = MakeShareable(new FImageLoader(FileNames, LoadImageIndex, FileNames.Num() - LoadImageIndex));
 }
 
+void DataManager::OpenFolder(const FString& Path)
+{
+	ClearAllFiles();
+	FileManager::GetAllFileInFolder(Path, FileNames);
+	{
+		FScopeLock Lock(&DataLock);
+		Brushes.SetNumZeroed(FileNames.Num());
+	}
+	LoadAllImage();
+}
+
 const EReadMode& DataManager::GetReadMode()
 {
 	return ReadMode;
+}
+
+const EShowDirection& DataManager::GetShowDirection()
+{
+	return ShowDirection;
 }
 
 void DataManager::SortFileNames()
@@ -142,9 +152,24 @@ void DataManager::SortFileNames()
 void DataManager::SwitchReadMode(EReadMode&& readMode)
 {
 	ReadMode = readMode;
+	if (ReadMode == SINGLE_PAGE)
+	{
+		SwitchShowDirection(LEFT_TO_RIGHT);
+	}
 	isDirty = true;
 	Page = CurrentImage / readMode + 1;
 	CurrentImage = (Page - 1) * ReadMode;
+}
+
+void DataManager::SwitchShowDirection(EShowDirection&& InShowDirection)
+{
+	if (ReadMode == SINGLE_PAGE)
+	{
+		ShowDirection = EShowDirection::LEFT_TO_RIGHT;
+		return;
+	}
+	ShowDirection = InShowDirection;
+	isDirty = true;
 }
 
 void DataManager::ChangePageTo(int page)

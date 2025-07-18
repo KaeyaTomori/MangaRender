@@ -8,6 +8,12 @@ enum EReadMode : int8
 	MULTI_PAGE
 };
 
+enum EShowDirection : int8
+{
+	LEFT_TO_RIGHT = 0,
+	RIGHT_TO_LEFT = 1,
+};
+
 struct ELoadLevel
 {
 	const int8 QUICK_LOAD_FIRST = 4;
@@ -34,6 +40,7 @@ public:
 
 	const FString GetFile(int index);
 	const EReadMode& GetReadMode();
+	const EShowDirection& GetShowDirection();
 	TArray<FString>& GetFileNames();
 	TSharedPtr<FSlateBrush> GetBrush(int index);
 
@@ -44,12 +51,14 @@ public:
 	bool IsDirty();
 	void AlreadyUpdate();
 	void OpenFolder();
+	void OpenFolder(const FString& Path);
 	void ClearAllFiles();
 	void LoadAllImage();
 	void LoadImageFirst(int count);
 	void LoadImageByCount(int count);
 	void SortFileNames();
 	void SwitchReadMode(EReadMode&& readMode);
+	void SwitchShowDirection(EShowDirection&& InShowDirection);
 
 private:
 	void ChangePageTo(int page);
@@ -76,6 +85,7 @@ private:
 
 	TArray<FString> FileNames;
 	EReadMode ReadMode = SINGLE_PAGE;
+	EShowDirection ShowDirection = LEFT_TO_RIGHT;
 	TArray<TSharedPtr<FSlateBrush>> Brushes;
 
 	FCriticalSection DataLock;
