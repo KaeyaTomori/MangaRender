@@ -88,6 +88,5 @@ private:
 	TArray<TSharedPtr<FSlateBrush>> Brushes;
 
 	FCriticalSection DataLock;
-	TSharedPtr<FSlateBrush> PlaceholderBrush;
 	TMap<FString, TArray<uint8>> ImageRawDataMap;
 };

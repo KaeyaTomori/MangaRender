@@ -132,7 +132,7 @@ FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointe
 	// UE_LOG(LogTemp, Display, TEXT("OnMouseButtonDown"));
 	if (MouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		return FReply::Unhandled();
+		return FReply::Handled();
 	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton)
 	{

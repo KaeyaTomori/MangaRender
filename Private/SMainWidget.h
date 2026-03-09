@@ -31,7 +31,6 @@ public:
 	virtual void OnDragLeave(const FDragDropEvent& DragDropEvent) override;
 	virtual FReply OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent& DragDropEvent) override;
 
-
 	void OnReadModeChanged();
 	void OnShowDirectionChanged();
 	

@@ -78,7 +78,7 @@ TSharedPtr<FSlateBrush> DataManager::GetBrush(int index)
 	{
 		UE_LOG(LogTemp, Display, TEXT("IsInValidIndex index = %d"), index);
 	}
-	return Brushes.IsValidIndex(index) ? Brushes[index] : PlaceholderBrush;
+	return Brushes.IsValidIndex(index) ? Brushes[index] : nullptr;
 	
 	// 	UE_LOG(LogTemp, Display, TEXT("Getting brush index %d, LoadImageIndex = %d"), index, LoadImageIndex.Load());
 }
@@ -201,7 +201,6 @@ void DataManager::LoadImage(FString fileName)
 
 DataManager::DataManager()
 {
-	PlaceholderBrush = MakeShared<FSlateImageBrush>(FName("/Game/UI/placeholder"), FVector2D(512, 512));
 }
 
 void DataManager::StopLoading()
