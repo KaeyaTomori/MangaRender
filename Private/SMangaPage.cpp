@@ -2,7 +2,7 @@
 
 SMangaPage::SMangaPage()
 {
-	ImageCache = FMangaImageCache::getInstance();
+	ImageCache = FMangaImageCache::GetInstance();
 }
 
 SMangaPage::~SMangaPage()

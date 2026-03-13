@@ -20,7 +20,7 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 	FSlateApplication::InitializeAsStandaloneApplication(GetStandardStandaloneRenderer());
 	FSlateApplication::InitHighDPI(true);
 
-	auto ImageCache = FMangaImageCache::getInstance();
+	auto ImageCache = FMangaImageCache::GetInstance();
 	
 	TSharedRef<SMainWidget> mainWidget = SNew(SMainWidget);
 	TSharedRef<SWindow> Window = SNew(SWindow)
@@ -35,10 +35,6 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 	FTaskGraphInterface::Get().AttachToThread(ENamedThreads::GameThread);
 	
 	FImageDecoder::Init();
-
-	// debug:
-	// FileManager::GetAllFileInFolder("D:/acg", data->FileNames);
-	// data->isDirty = true;
 
 	while (!IsEngineExitRequested())
 	{

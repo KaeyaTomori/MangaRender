@@ -34,14 +34,15 @@ private:
 class FMangaImageCache
 {
 public:
-	static FMangaImageCache* getInstance();
-	FMangaImageCache();
+	static FMangaImageCache* GetInstance();
+	FMangaImageCache() = default;
 
 	const FString GetFile(int index);
 	const EReadMode& GetReadMode();
 	const EShowDirection& GetShowDirection();
 	TArray<FString>& GetFileNames();
 	TSharedPtr<FSlateBrush> GetBrush(int index);
+	bool GetImageRawData(FString InFileNames, TArray<uint8>& OutData);
 
 	const int& GetCurrentImageIndex();
 	void NextPage();
@@ -53,15 +54,13 @@ public:
 	void OpenFolder(const FString& Path);
 	void ClearAllFiles();
 	void LoadAllImage();
-	void LoadImageFirst(int count);
-	void LoadImageByCount(int count);
 	void SortFileNames();
 	void SwitchReadMode(EReadMode&& readMode);
 	void SwitchShowDirection(EShowDirection&& InShowDirection);
+	void ChangePageTo(int page);
+	int PictrueIndexToPage(int Index);
 
 private:
-	void ChangePageTo(int page);
-	void LoadImage(FString fileName);
 	void LoadImageAtIndex(int index);
 	void LoadImageInStages();
 	void StopLoading();
@@ -73,7 +72,7 @@ public:
 	int32 WindowWidth = 1280;
 	int32 WindowHeight = 720;
 
-	const int DefaultPage = 1;
+	const int DefaultPage = 0;
 
 private:
 	bool isDirty = false;

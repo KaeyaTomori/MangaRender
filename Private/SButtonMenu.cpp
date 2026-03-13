@@ -29,7 +29,7 @@ void SButtonMenu::Construct(const FArguments& InArgs)
 			{
 				AsyncTask(ENamedThreads::GameThread, []()
 				{
-					auto ImageCache = FMangaImageCache::getInstance();
+					auto ImageCache = FMangaImageCache::GetInstance();
 					ImageCache->OpenFolder();
 				});
 				return FReply::Handled();

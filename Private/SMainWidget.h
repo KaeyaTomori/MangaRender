@@ -3,6 +3,7 @@
 #include "MangaImageCache.h"
 
 class SMangaPage;
+class SThumbnailSidebar;
 
 class SMainWidget : public SCompoundWidget
 {
@@ -34,13 +35,15 @@ public:
 
 	void OnReadModeChanged();
 	void OnShowDirectionChanged();
+	void OnThumbnailSelected(int32 PageIndex);
 	
 	void updateImageWidget(TSharedPtr<SMangaPage> imageWidget, int showIndex);
-	void update();
+	void Update();
 
 private:
 	void NextPage();
 	void LastPage();
+	void SyncThumbnailSelection();
 	
 private:
 	const float WheelSpeed = 0.1f;
@@ -55,8 +58,10 @@ private:
 	int FirstImageToShow = 0;
 	TSharedPtr<SMangaPage> imageWidgetL;
 	TSharedPtr<SMangaPage> imageWidgetR;
+	TSharedPtr<SThumbnailSidebar> ThumbnailSidebar;
 
 	FMangaImageCache* ImageCache;
 
 	bool bIsDragAccept = false;
+	bool bShowThumbnailSidebar = true;
 };

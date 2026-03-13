@@ -4,7 +4,7 @@
 
 static FMangaImageCache* gDataManager;
 
-FMangaImageCache* FMangaImageCache::getInstance()
+FMangaImageCache* FMangaImageCache::GetInstance()
 {
 	if (gDataManager == nullptr)
 	{
@@ -47,30 +47,6 @@ void FMangaImageCache::LoadAllImage()
 
 }
 
-void FMangaImageCache::LoadImageFirst(int count)
-{
-	// UE_LOG(LogTemp, Display, TEXT("LoadingImage count = %d"), count);
-	int endLoadImageIndex = LoadImageIndex + count;
-	IsLoading.Store(true);
-	for (; LoadImageIndex < FileNames.Num() && LoadImageIndex < endLoadImageIndex; ++LoadImageIndex)
-	{
-		LoadImage(FileNames[LoadImageIndex]);
-	}
-	IsLoading.Store(false);
-}
-
-void FMangaImageCache::LoadImageByCount(int count)
-{
-	UE_LOG(LogTemp, Display, TEXT("LoadingImage count = %d"), count);
-	int endLoadImageIndex = LoadImageIndex + count;
-	IsLoading.Store(true);
-	for (; LoadImageIndex < FileNames.Num() && LoadImageIndex < endLoadImageIndex; ++LoadImageIndex)
-	{
-		LoadImage(FileNames[LoadImageIndex]);
-	}
-	IsLoading.Store(false);
-}
-
 TSharedPtr<FSlateBrush> FMangaImageCache::GetBrush(int index)
 {
 	FScopeLock Lock(&DataLock);
@@ -83,6 +59,16 @@ TSharedPtr<FSlateBrush> FMangaImageCache::GetBrush(int index)
 	// 	UE_LOG(LogTemp, Display, TEXT("Getting brush index %d, LoadImageIndex = %d"), index, LoadImageIndex.Load());
 }
 
+bool FMangaImageCache::GetImageRawData(FString InFileNames, TArray<uint8>& OutData)
+{
+	if (ImageRawDataMap.Contains(InFileNames))
+	{
+		OutData = ImageRawDataMap[InFileNames];
+		return true;
+	}
+	return false;
+}
+
 const int& FMangaImageCache::GetCurrentImageIndex()
 {
 	return CurrentImage;
@@ -90,7 +76,7 @@ const int& FMangaImageCache::GetCurrentImageIndex()
 
 void FMangaImageCache::NextPage()
 {
-	if (Page < (FileNames.Num() + ReadMode - 1) / ReadMode)
+	if (Page < (FileNames.Num() - 1 + ReadMode - 1) / ReadMode)
 	{
 		ChangePageTo(Page + 1);
 	}
@@ -98,7 +84,7 @@ void FMangaImageCache::NextPage()
 
 void FMangaImageCache::LastPage()
 {
-	if (Page > 1)
+	if (Page > 0)
 	{
 		ChangePageTo(Page - 1);
 	}
@@ -118,9 +104,6 @@ void FMangaImageCache::OpenFolder()
 {
 	FString path = FImageDecoder::PickFolder();
 	OpenFolder(path);
-
-	// LoadImageFirst(2);
-	// ImageLoader = MakeShareable(new FImageLoader(FileNames, LoadImageIndex, FileNames.Num() - LoadImageIndex));
 }
 
 void FMangaImageCache::OpenFolder(const FString& Path)
@@ -158,8 +141,8 @@ void FMangaImageCache::SwitchReadMode(EReadMode&& readMode)
 		SwitchShowDirection(LEFT_TO_RIGHT);
 	}
 	isDirty = true;
-	Page = CurrentImage / readMode + 1;
-	CurrentImage = (Page - 1) * ReadMode;
+	Page = CurrentImage / readMode;
+	CurrentImage = Page * ReadMode;
 }
 
 void FMangaImageCache::SwitchShowDirection(EShowDirection&& InShowDirection)
@@ -176,10 +159,15 @@ void FMangaImageCache::SwitchShowDirection(EShowDirection&& InShowDirection)
 void FMangaImageCache::ChangePageTo(int page)
 {
 	Page = page;
-	CurrentImage = (Page - 1) * ReadMode;
+	CurrentImage = Page * ReadMode;
 	isDirty = true;
 
 	EnsureBufferLoaded();
+}
+
+int FMangaImageCache::PictrueIndexToPage(int Index)
+{
+	return Index / ReadMode;
 }
 
 void FMangaImageCache::EnsureBufferLoaded()
@@ -195,21 +183,6 @@ void FMangaImageCache::EnsureBufferLoaded()
 	{
 		LoadImageInStages();
 	}
-}
-
-void FMangaImageCache::LoadImage(FString fileName)
-{
-	TArray<uint8> fileData;
-	int32 imageWidth, imageHeight;
-	FImageDecoder::GetImageData(fileName, fileData, imageWidth, imageHeight);
-	ImageRawDataMap.Add(fileName, MoveTemp(fileData));
-	{
-		Brushes.Add(FSlateDynamicImageBrush::CreateWithImageData(*fileName, FVector2D(imageWidth, imageHeight), ImageRawDataMap[fileName]));
-	}
-}
-
-FMangaImageCache::FMangaImageCache()
-{
 }
 
 void FMangaImageCache::StopLoading()

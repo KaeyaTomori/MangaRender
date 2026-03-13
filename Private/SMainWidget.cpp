@@ -3,12 +3,13 @@
 #include "MangaImageCache.h"
 #include "SButtonMenu.h"
 #include "SMangaPage.h"
+#include "SThumbnailSidebar.h"
 
 static SMainWidget* mainWidget;
 
 void SMainWidget::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
 {
-	update();
+	Update();
 	SCompoundWidget::Tick(AllottedGeometry, InCurrentTime, InDeltaTime);
 }
 
@@ -44,7 +45,7 @@ void SMainWidget::OnShowDirectionChanged()
 
 SMainWidget::SMainWidget()
 {
-	ImageCache = FMangaImageCache::getInstance();
+	ImageCache = FMangaImageCache::GetInstance();
 	mainWidget = this;
 }
 
@@ -57,12 +58,16 @@ void SMainWidget::Construct(const FArguments& InArgs)
 {
 	imageWidgetL = nullptr;
 	imageWidgetR = nullptr;
-
-	if (ImageCache->GetReadMode() == EReadMode::SINGLE_PAGE)
-	{
-		ChildSlot
-		[
-			SNew(SOverlay)
+	
+	// 创建侧边栏
+	TSharedPtr<SThumbnailSidebar> Sidebar = SNew(SThumbnailSidebar)
+		.OnThumbnailSelected(this, &SMainWidget::OnThumbnailSelected);
+	ThumbnailSidebar = Sidebar;
+	ThumbnailSidebar->SetImageCache(ImageCache);
+	
+	// 主内容区域
+	TSharedRef<SWidget> MainContent = (ImageCache->GetReadMode() == EReadMode::SINGLE_PAGE)
+		? SNew(SOverlay)
 			+ SOverlay::Slot()
 			.HAlign(HAlign_Center)
 			.VAlign(VAlign_Center)
@@ -75,20 +80,13 @@ void SMainWidget::Construct(const FArguments& InArgs)
 					.ImageAlignment(EImageAlignment::CENTER)
 				]
 			]
-			
 			+ SOverlay::Slot()
 			.HAlign(HAlign_Left)
 			.VAlign(VAlign_Top)
 			[
 				SNew(SButtonMenu)
 			]
-		];
-	}
-	else if (ImageCache->GetReadMode() == EReadMode::DOUBLE_PAGE)
-	{
-		ChildSlot
-		[
-			SNew(SOverlay)
+		: SNew(SOverlay)
 			+ SOverlay::Slot()
 			.HAlign(HAlign_Center)
 			.VAlign(VAlign_Center)
@@ -107,16 +105,35 @@ void SMainWidget::Construct(const FArguments& InArgs)
 					.ImageAlignment(EImageAlignment::LEFT)
 				]
 			]
-			
 			+ SOverlay::Slot()
 			.HAlign(HAlign_Left)
 			.VAlign(VAlign_Top)
 			[
 				SNew(SButtonMenu)
-			]
-		];
-	}
+			];
 
+	// 整体布局：侧边栏 + 主内容
+	ChildSlot
+	[
+		SNew(SHorizontalBox)
+		// 侧边栏
+		+ SHorizontalBox::Slot()
+		.AutoWidth()
+		[
+			SNew(SBox)
+			.Visibility_Lambda([this]() { return bShowThumbnailSidebar ? EVisibility::Visible : EVisibility::Collapsed; })
+			[
+				ThumbnailSidebar.ToSharedRef()
+			]
+		]
+		// 主内容区
+		+ SHorizontalBox::Slot()
+		.FillWidth(1.0f)
+		[
+			MainContent
+		]
+	];
+	
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
@@ -315,7 +332,7 @@ void SMainWidget::updateImageWidget(TSharedPtr<SMangaPage> imageWidget, int show
 	}
 }
 
-void SMainWidget::update()
+void SMainWidget::Update()
 {
 	if (ImageCache->IsDirty())
 	{
@@ -326,6 +343,13 @@ void SMainWidget::update()
 		FirstImageToShow = ImageCache->GetCurrentImageIndex();
 		updateImageWidget(imageWidgetL, FirstImageToShow + ImageCache->GetShowDirection());
 		updateImageWidget(imageWidgetR, FirstImageToShow + (ImageCache->GetShowDirection() ^ 1));
+
+		// 同步当前页到侧边栏
+		// if (ThumbnailSidebar.IsValid())
+		// {
+		// 	int32 CurrentPage = ImageCache->GetCurrentImageIndex() / ImageCache->GetReadMode() + 1;
+		// 	ThumbnailSidebar->SetSelectedPage(CurrentPage - 1);
+		// }
 	}
 }
 
@@ -337,4 +361,27 @@ void SMainWidget::NextPage()
 void SMainWidget::LastPage()
 {
 	ImageCache->LastPage();
+}
+
+void SMainWidget::OnThumbnailSelected(int32 PageIndex)
+{
+	// 直接跳转到指定页
+	ImageCache->ChangePageTo(ImageCache->PictrueIndexToPage(PageIndex));
+
+	// 更新侧边栏选中状态
+	if (ThumbnailSidebar.IsValid())
+	{
+		ThumbnailSidebar->SetSelectedPage(PageIndex);
+		ThumbnailSidebar->ScrollToThumbnail(PageIndex);
+	}
+}
+
+void SMainWidget::SyncThumbnailSelection()
+{
+	if (!ThumbnailSidebar.IsValid())
+		return;
+
+	int32 CurrentPage = ImageCache->GetCurrentImageIndex() / ImageCache->GetReadMode();
+	ThumbnailSidebar->SetSelectedPage(CurrentPage);
+	ThumbnailSidebar->ScrollToThumbnail(CurrentPage);
 }
