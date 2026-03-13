@@ -71,8 +71,6 @@ bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& Im
 
 bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
-	UE_LOG(LogTemp, Log, TEXT("Try Decode WebP"));
-
 	uint8_t* rawData = WebPDecodeBGRA(FileData.GetData(), FileData.Num(), &Width, &Height);
 	if (!rawData)
 	{

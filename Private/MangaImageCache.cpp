@@ -52,7 +52,6 @@ void FMangaImageCache::LoadAllImage()
 	IsLoading.Store(true);
 	LoadLevel.reset();
 	LoadImageInStages();
-
 }
 
 TSharedPtr<FSlateBrush> FMangaImageCache::GetBrush(int index)
@@ -63,8 +62,6 @@ TSharedPtr<FSlateBrush> FMangaImageCache::GetBrush(int index)
 		UE_LOG(LogTemp, Display, TEXT("IsInValidIndex index = %d"), index);
 	}
 	return Brushes.IsValidIndex(index) ? Brushes[index] : nullptr;
-
-	// 	UE_LOG(LogTemp, Display, TEXT("Getting brush index %d, LoadImageIndex = %d"), index, LoadImageIndex.Load());
 }
 
 bool FMangaImageCache::GetImageRawData(FString InFileNames, TArray<uint8>& OutData)
@@ -147,6 +144,9 @@ void FMangaImageCache::SwitchReadMode(EReadMode&& readMode)
 	if (ReadMode == SINGLE_PAGE)
 	{
 		SwitchShowDirection(LEFT_TO_RIGHT);
+	} else
+	{
+		SwitchShowDirection(RIGHT_TO_LEFT);
 	}
 	isDirty = true;
 	Page = CurrentImage / readMode;
@@ -296,14 +296,16 @@ int32 FMangaImageCache::GetTotalPageCount() const
 void FMangaImageCache::LoadImageAtIndex(int index)
 {
 	if (!FileNames.IsValidIndex(index)) return;
-
+	
+	if (LoadedIndices.Contains(index)) return;
+	
 	// 检查是否已加载
 	{
 		FScopeLock Lock(&LoadedIndicesLock);
-		if (LoadedIndices.Contains(index))
-		{
-			return;
-		}
+		if (LoadedIndices.Contains(index)) return;
+		UE_LOG(LogTemp, Display, TEXT("LoadImageAtIndex index = %d"), index);
+		// 标记为已加载
+		LoadedIndices.Add(index);
 	}
 
 	const FString& fileName = FileNames[index];
@@ -313,15 +315,10 @@ void FMangaImageCache::LoadImageAtIndex(int index)
 
 	AsyncTask(ENamedThreads::GameThread, [this, fileName, fileData = MoveTemp(fileData), imageWidth, imageHeight, index]() mutable {
 		FScopeLock Lock(&DataLock);
+		
 		ImageRawDataMap.Add(fileName, MoveTemp(fileData));
 		TSharedPtr<FSlateBrush> brush = FSlateDynamicImageBrush::CreateWithImageData(*fileName, FVector2D(imageWidth, imageHeight), ImageRawDataMap[fileName]);
 		Brushes[index] = brush;
-
-		// 标记为已加载
-		{
-			FScopeLock IndicesLock(&LoadedIndicesLock);
-			LoadedIndices.Add(index);
-		}
 
 		// 广播加载完成
 		OnImageLoaded.Broadcast(index);

@@ -60,20 +60,12 @@ void SThumbnailSidebar::SetImageCache(FMangaImageCache* InCache)
 
 void SThumbnailSidebar::BindToImageCache()
 {
-	if (ImageCache)
-	{
-		OnImageLoadedHandle = ImageCache->OnImageLoaded.AddSP(
-			SharedThis(this), &SThumbnailSidebar::OnImageLoaded);
-	}
+	
 }
 
 void SThumbnailSidebar::UnbindFromImageCache()
 {
-	if (ImageCache && OnImageLoadedHandle.IsValid())
-	{
-		ImageCache->OnImageLoaded.Remove(OnImageLoadedHandle);
-		OnImageLoadedHandle.Reset();
-	}
+	
 }
 
 void SThumbnailSidebar::RefreshThumbnails()
@@ -89,12 +81,6 @@ void SThumbnailSidebar::RefreshThumbnails()
 	}
 
 	RebuildThumbnailList();
-
-	// 尝试刷新已加载的图片缩略图
-	for (int32 i = 0; i < ThumbnailWidgets.Num(); ++i)
-	{
-		TryRefreshThumbnail(i);
-	}
 }
 
 void SThumbnailSidebar::RebuildThumbnailList()
@@ -180,16 +166,7 @@ FReply SThumbnailSidebar::OnThumbnailClicked(int32 PageIndex)
 
 const FSlateBrush* SThumbnailSidebar::GetThumbnailBrush(int32 PageIndex) const
 {
-	FScopeLock Lock(const_cast<FCriticalSection*>(&ThumbnailLock));
-
-	if (const TSharedPtr<FSlateDynamicImageBrush>* BrushPtr = ThumbnailBrushes.Find(PageIndex))
-	{
-		return BrushPtr->Get();
-	}
-
-	// 返回默认占位图
-	// return FCoreStyle::Get().GetBrush("Checkerboard");
-	return nullptr;
+	return FMangaImageCache::GetInstance()->GetBrush(PageIndex).Get();
 }
 
 FSlateColor SThumbnailSidebar::GetSelectionColor(int32 PageIndex) const
@@ -231,81 +208,3 @@ void SThumbnailSidebar::ScrollToThumbnail(int32 PageIndex)
     }
 }
 
-void SThumbnailSidebar::GenerateThumbnailsAsync()
-{
-	// 不再使用：缩略图现在通过 OnImageLoaded 委托动态加载
-	// 保留此方法用于兼容性，但不做任何操作
-}
-
-void SThumbnailSidebar::OnImageLoaded(int32 ImageIndex)
-{
-	if (!ImageCache) return;
-
-	// 图片索引转换为页号
-	int32 PageIndex = ImageCache->PictrueIndexToPage(ImageIndex);
-
-	// 在主线程刷新对应缩略图
-	AsyncTask(ENamedThreads::GameThread, [this, PageIndex]()
-	{
-		RefreshThumbnailAt(PageIndex);
-	});
-}
-
-void SThumbnailSidebar::TryRefreshThumbnail(int32 PageIndex)
-{
-	if (!ImageCache || !ThumbnailWidgets.IsValidIndex(PageIndex))
-	{
-		return;
-	}
-
-	// 计算该页对应的图片索引
-	int32 ImageIndex = PageIndex * static_cast<int32>(ImageCache->GetReadMode());
-
-	// 检查图片是否已加载
-	if (ImageCache->IsImageLoaded(ImageIndex))
-	{
-		RefreshThumbnailAt(PageIndex);
-	}
-}
-
-void SThumbnailSidebar::RefreshThumbnailAt(int32 PageIndex)
-{
-	if (!ImageCache || !ThumbnailWidgets.IsValidIndex(PageIndex))
-	{
-		return;
-	}
-
-	// 计算该页对应的图片索引（取该页的第一张图）
-	int32 ImageIndex = PageIndex * static_cast<int32>(ImageCache->GetReadMode());
-
-	TArray<FString>& FileNames = ImageCache->GetFileNames();
-	if (!FileNames.IsValidIndex(ImageIndex))
-	{
-		return;
-	}
-
-	// 尝试获取已加载的图片数据
-	const FString& FilePath = FileNames[ImageIndex];
-	TArray<uint8> FileData;
-
-	if (ImageCache->GetImageRawData(FilePath, FileData))
-	{
-		// 创建缩略图Brush
-		TSharedPtr<FSlateDynamicImageBrush> NewBrush = FSlateDynamicImageBrush::CreateWithImageData(
-			*FilePath,
-			FVector2D(ThumbnailWidth, ThumbnailHeight),
-			FileData
-		);
-
-		{
-			FScopeLock Lock(&ThumbnailLock);
-			ThumbnailBrushes.Add(PageIndex, NewBrush);
-		}
-
-		// 只刷新该缩略图的UI
-		if (ThumbnailWidgets[PageIndex].IsValid())
-		{
-			ThumbnailWidgets[PageIndex]->Invalidate(EInvalidateWidget::PaintAndVolatility);
-		}
-	}
-}

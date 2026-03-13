@@ -33,9 +33,6 @@ public:
 	// 刷新缩略图列表（文件夹改变时调用）
 	void RefreshThumbnails();
 
-	// 精准刷新指定缩略图（不重建整个列表）
-	void RefreshThumbnailAt(int32 PageIndex);
-
 	// 滚动到指定缩略图并高亮
 	void ScrollToThumbnail(int32 PageIndex);
 
@@ -58,14 +55,8 @@ protected:
 	// 获取当前选中状态
 	FSlateColor GetSelectionColor(int32 PageIndex) const;
 
-	// 生成缩略图（异步）
-	void GenerateThumbnailsAsync();
-
 	// 图片加载完成回调
 	void OnImageLoaded(int32 ImageIndex);
-
-	// 尝试刷新缩略图（如果数据已可用）
-	void TryRefreshThumbnail(int32 PageIndex);
 
 private:
 	FMangaImageCache* ImageCache = nullptr;

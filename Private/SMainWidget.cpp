@@ -185,7 +185,10 @@ FReply SMainWidget::OnMouseMove(const FGeometry& MyGeometry, const FPointerEvent
 	{
 		FVector2D delta = MouseEvent.GetCursorDelta();
 		ImageOffset += delta;
-		imageWidgetL.Get()->UpdateOffset(ImageOffset);
+		if (imageWidgetL.IsValid())
+		{
+			imageWidgetL.Get()->UpdateOffset(ImageOffset);
+		}
 		if (imageWidgetR.IsValid())
 		{
 			imageWidgetR.Get()->UpdateOffset(ImageOffset);
@@ -213,7 +216,10 @@ FReply SMainWidget::OnMouseWheel(const FGeometry& MyGeometry, const FPointerEven
 		float wheelDelta = MouseEvent.GetWheelDelta();
 		ZoomFactor = FMath::Clamp(ZoomFactor + wheelDelta * WheelSpeed, 0.1f, 10.f);
 
-		imageWidgetL.Get()->UpdateZoomFactor(ZoomFactor, RenderPivot);
+		if (imageWidgetL.IsValid())
+		{
+			imageWidgetL.Get()->UpdateZoomFactor(ZoomFactor, RenderPivot);
+		}
 		if (imageWidgetR.IsValid())
 		{
 			imageWidgetR.Get()->UpdateZoomFactor(ZoomFactor, RenderPivot);
@@ -359,9 +365,6 @@ void SMainWidget::Update()
 			}
 		}
 
-		// 移动窗口到当前页，加载窗口内未加载的图片
-		MoveWindowToCurrentPage();
-
 		// 同步当前页到侧边栏
 		if (ThumbnailSidebar.IsValid())
 		{
@@ -386,13 +389,11 @@ void SMainWidget::MoveWindowToCurrentPage()
 void SMainWidget::NextPage()
 {
 	ImageCache->NextPage();
-	MoveWindowToCurrentPage();
 }
 
 void SMainWidget::LastPage()
 {
 	ImageCache->LastPage();
-	MoveWindowToCurrentPage();
 }
 
 void SMainWidget::OnThumbnailSelected(int32 PageIndex)
