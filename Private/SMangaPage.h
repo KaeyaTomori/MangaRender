@@ -1,5 +1,5 @@
 #pragma once
-#include "DataManager.h"
+#include "MangaImageCache.h"
 
 enum EImageAlignment : int
 {
@@ -8,22 +8,22 @@ enum EImageAlignment : int
 	RIGHT,
 };
 
-class SImageWidget : public SLeafWidget
+class SMangaPage : public SLeafWidget
 {
 public:
-	SLATE_BEGIN_ARGS(SImageWidget){}
+	SLATE_BEGIN_ARGS(SMangaPage){}
 		SLATE_ARGUMENT(EImageAlignment, ImageAlignment)
 	SLATE_END_ARGS()
-	
+
 public:
-	SImageWidget();
-	~SImageWidget();
+	SMangaPage();
+	~SMangaPage();
 	void Construct(const FArguments& InArgs);
-	
+
 	void update(int showIndex, FVector2D imageOffset, float zoomFactor, FVector2D renderPivot);
 	void UpdateOffset(FVector2D imageOffset);
 	void UpdateZoomFactor(float zoomFactor, FVector2D renderPivot);
-	
+
 	virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
 		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
@@ -35,8 +35,8 @@ private:
 	float ZoomFactor = 1.0f;
 
 	EImageAlignment ImageAlignment = EImageAlignment::CENTER;
-	
+
 	TSharedPtr<FSlateBrush> Brush;
-	
-	DataManager* data;
+
+	FMangaImageCache* ImageCache;
 };

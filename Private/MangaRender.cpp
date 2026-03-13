@@ -2,11 +2,11 @@
 
 #include "MangaRender.h"
 
-#include "DataManager.h"
+#include "MangaImageCache.h"
 #include "RequiredProgramMainCPPInclude.h"
 #include "SMainWidget.h"
 #include "StandaloneRenderer.h"
-#include "Tool/FileManager.h"
+#include "Utils/FImageDecoder.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMangaRender, Log, All);
 
@@ -20,11 +20,11 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 	FSlateApplication::InitializeAsStandaloneApplication(GetStandardStandaloneRenderer());
 	FSlateApplication::InitHighDPI(true);
 
-	auto data = DataManager::getInstance();
+	auto ImageCache = FMangaImageCache::getInstance();
 	
 	TSharedRef<SMainWidget> mainWidget = SNew(SMainWidget);
 	TSharedRef<SWindow> Window = SNew(SWindow)
-	.ClientSize(FVector2D(data->WindowWidth, data->WindowHeight))
+	.ClientSize(FVector2D(ImageCache->WindowWidth, ImageCache->WindowHeight))
 	[
 		mainWidget
 	];
@@ -34,7 +34,7 @@ int WINAPI WinMain( _In_ HINSTANCE hInInstance, _In_opt_ HINSTANCE hPrevInstance
 	FTaskGraphInterface::Startup(FPlatformMisc::NumberOfWorkerThreadsToSpawn());
 	FTaskGraphInterface::Get().AttachToThread(ENamedThreads::GameThread);
 	
-	FileManager::Init();
+	FImageDecoder::Init();
 
 	// debug:
 	// FileManager::GetAllFileInFolder("D:/acg", data->FileNames);

@@ -1,7 +1,8 @@
 #include "SMainWidget.h"
 
-#include "DataManager.h"
+#include "MangaImageCache.h"
 #include "SButtonMenu.h"
+#include "SMangaPage.h"
 
 static SMainWidget* mainWidget;
 
@@ -18,32 +19,32 @@ SMainWidget* SMainWidget::GetInstance()
 
 void SMainWidget::OnReadModeChanged()
 {
-	if (data->GetReadMode() == EReadMode::SINGLE_PAGE)
+	if (ImageCache->GetReadMode() == EReadMode::SINGLE_PAGE)
 	{
-		data->SwitchReadMode(EReadMode::DOUBLE_PAGE);
+		ImageCache->SwitchReadMode(EReadMode::DOUBLE_PAGE);
 	}
 	else
 	{
-		data->SwitchReadMode(EReadMode::SINGLE_PAGE);
+		ImageCache->SwitchReadMode(EReadMode::SINGLE_PAGE);
 	}
 	Construct(FArguments());
 }
 
 void SMainWidget::OnShowDirectionChanged()
 {
-	if (data->GetShowDirection() == LEFT_TO_RIGHT)
+	if (ImageCache->GetShowDirection() == LEFT_TO_RIGHT)
 	{
-		data->SwitchShowDirection(RIGHT_TO_LEFT);
+		ImageCache->SwitchShowDirection(RIGHT_TO_LEFT);
 	}
 	else
 	{
-		data->SwitchShowDirection(LEFT_TO_RIGHT);
+		ImageCache->SwitchShowDirection(LEFT_TO_RIGHT);
 	}
 }
 
 SMainWidget::SMainWidget()
 {
-	data = DataManager::getInstance();
+	ImageCache = FMangaImageCache::getInstance();
 	mainWidget = this;
 }
 
@@ -57,7 +58,7 @@ void SMainWidget::Construct(const FArguments& InArgs)
 	imageWidgetL = nullptr;
 	imageWidgetR = nullptr;
 
-	if (data->GetReadMode() == EReadMode::SINGLE_PAGE)
+	if (ImageCache->GetReadMode() == EReadMode::SINGLE_PAGE)
 	{
 		ChildSlot
 		[
@@ -70,7 +71,7 @@ void SMainWidget::Construct(const FArguments& InArgs)
 				+ SHorizontalBox::Slot()
 				.FillWidth(0.5f)
 				[
-					SAssignNew(imageWidgetL, SImageWidget)
+					SAssignNew(imageWidgetL, SMangaPage)
 					.ImageAlignment(EImageAlignment::CENTER)
 				]
 			]
@@ -83,7 +84,7 @@ void SMainWidget::Construct(const FArguments& InArgs)
 			]
 		];
 	}
-	else if (data->GetReadMode() == EReadMode::DOUBLE_PAGE)
+	else if (ImageCache->GetReadMode() == EReadMode::DOUBLE_PAGE)
 	{
 		ChildSlot
 		[
@@ -96,13 +97,13 @@ void SMainWidget::Construct(const FArguments& InArgs)
 				+ SHorizontalBox::Slot()
 				.FillWidth(0.5f)
 				[
-					SAssignNew(imageWidgetL, SImageWidget)
+					SAssignNew(imageWidgetL, SMangaPage)
 					.ImageAlignment(EImageAlignment::RIGHT)
 				]
 				+ SHorizontalBox::Slot()
 				.FillWidth(0.5f)
 				[
-					SAssignNew(imageWidgetR, SImageWidget)
+					SAssignNew(imageWidgetR, SMangaPage)
 					.ImageAlignment(EImageAlignment::LEFT)
 				]
 			]
@@ -245,7 +246,7 @@ FReply SMainWidget::OnDrop(const FGeometry& MyGeometry, const FDragDropEvent& Dr
 			if (FPaths::DirectoryExists(Path))
 			{
 				UE_LOG(LogTemp, Display, TEXT("folder: %s"), *Path);
-				data->OpenFolder(Path);
+				ImageCache->OpenFolder(Path);
 			}
 			else if (FPaths::FileExists(Path))
 			{
@@ -307,7 +308,7 @@ FReply SMainWidget::OnDragOver(const FGeometry& MyGeometry, const FDragDropEvent
 	return FReply::Unhandled();
 }
 
-void SMainWidget::updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex) {
+void SMainWidget::updateImageWidget(TSharedPtr<SMangaPage> imageWidget, int showIndex) {
 	if (imageWidget.IsValid())
 	{
 		imageWidget.Get()->update(showIndex, ImageOffset, ZoomFactor, RenderPivot);
@@ -316,24 +317,24 @@ void SMainWidget::updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int sh
 
 void SMainWidget::update()
 {
-	if (data->IsDirty())
+	if (ImageCache->IsDirty())
 	{
-		data->AlreadyUpdate();
+		ImageCache->AlreadyUpdate();
 		ImageOffset = DefaultImageOffset;
 		RenderPivot = DefaultRenderPivot;
 		ZoomFactor = DefaultZoomFactor;
-		FirstImageToShow = data->GetCurrentImageIndex();
-		updateImageWidget(imageWidgetL, FirstImageToShow + data->GetShowDirection());
-		updateImageWidget(imageWidgetR, FirstImageToShow + (data->GetShowDirection() ^ 1));
+		FirstImageToShow = ImageCache->GetCurrentImageIndex();
+		updateImageWidget(imageWidgetL, FirstImageToShow + ImageCache->GetShowDirection());
+		updateImageWidget(imageWidgetR, FirstImageToShow + (ImageCache->GetShowDirection() ^ 1));
 	}
 }
 
 void SMainWidget::NextPage()
 {
-	data->NextPage();
+	ImageCache->NextPage();
 }
 
 void SMainWidget::LastPage()
 {
-	data->LastPage();
+	ImageCache->LastPage();
 }

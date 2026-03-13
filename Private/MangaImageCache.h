@@ -15,9 +15,9 @@ enum EShowDirection : int8
 
 struct ELoadLevel
 {
-	const int8 QUICK_LOAD_FIRST = 4;
-	const int8 QUICK_LOAD = 10;
-	const int8 LOAD = 20;
+	const int8 QUICK_LOAD_FIRST = 10;
+	const int8 QUICK_LOAD = 20;
+	const int8 LOAD = 40;
 	const int8 PRE_SLOW_LOAD = 50;
 
 	TArray<int> Level{ QUICK_LOAD_FIRST, QUICK_LOAD, LOAD, PRE_SLOW_LOAD };
@@ -31,11 +31,11 @@ private:
 	int index = 0;
 };
 
-class DataManager
+class FMangaImageCache
 {
 public:
-	static DataManager* getInstance();
-	DataManager();
+	static FMangaImageCache* getInstance();
+	FMangaImageCache();
 
 	const FString GetFile(int index);
 	const EReadMode& GetReadMode();
@@ -65,6 +65,7 @@ private:
 	void LoadImageAtIndex(int index);
 	void LoadImageInStages();
 	void StopLoading();
+	void EnsureBufferLoaded();
 
 public:
 	// int32 WindowWidth = 1920;
@@ -73,7 +74,7 @@ public:
 	int32 WindowHeight = 720;
 
 	const int DefaultPage = 1;
-	
+
 private:
 	bool isDirty = false;
 	int CurrentImage = 0;

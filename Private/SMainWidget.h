@@ -1,7 +1,8 @@
 #pragma once
 
-#include "DataManager.h"
-#include "SImageWidget.h"
+#include "MangaImageCache.h"
+
+class SMangaPage;
 
 class SMainWidget : public SCompoundWidget
 {
@@ -34,7 +35,7 @@ public:
 	void OnReadModeChanged();
 	void OnShowDirectionChanged();
 	
-	void updateImageWidget(TSharedPtr<SImageWidget> imageWidget, int showIndex);
+	void updateImageWidget(TSharedPtr<SMangaPage> imageWidget, int showIndex);
 	void update();
 
 private:
@@ -52,10 +53,10 @@ private:
 	FVector2D RenderPivot = DefaultRenderPivot;
 	float ZoomFactor = DefaultZoomFactor;
 	int FirstImageToShow = 0;
-	TSharedPtr<SImageWidget> imageWidgetL;
-	TSharedPtr<SImageWidget> imageWidgetR;
+	TSharedPtr<SMangaPage> imageWidgetL;
+	TSharedPtr<SMangaPage> imageWidgetR;
 
-	DataManager* data;
+	FMangaImageCache* ImageCache;
 
 	bool bIsDragAccept = false;
 };

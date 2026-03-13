@@ -1,4 +1,4 @@
-#include "FileManager.h"
+#include "FImageDecoder.h"
 
 #include <shobjidl_core.h>
 
@@ -12,7 +12,7 @@
 
 static IDesktopPlatform* platformModule;
 
-FString FileManager::PickFolder()
+FString FImageDecoder::PickFolder()
 {
 	FString FolderPath;
 	if (platformModule)
@@ -23,7 +23,7 @@ FString FileManager::PickFolder()
 			TEXT(""),  // 默认路径
 			FolderPath
 		);
-        
+
 		// if (bSuccess && !FolderPath.IsEmpty())
 		// {
 		// 	UE_LOG(LogTemp, Log, TEXT("选择的文件夹: %s"), *FolderPath);
@@ -35,7 +35,7 @@ FString FileManager::PickFolder()
 bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
 	IImageWrapperModule& ImageWrapperModule = FModuleManager::LoadModuleChecked<IImageWrapperModule>(FName("ImageWrapper"));
-	
+
 	// 检测图像格式
 	EImageFormat ImageFormat = ImageWrapperModule.DetectImageFormat(FileData.GetData(), FileData.Num());
 	if (ImageFormat == EImageFormat::Invalid)
@@ -59,13 +59,13 @@ bool GetImageDataByImageWrapper(const TArray<uint8>& FileData, TArray<uint8>& Im
 	}
 	Width = ImageWrapper->GetWidth();
 	Height = ImageWrapper->GetHeight();
-	
+
 	if (!ImageWrapper->GetRaw(ERGBFormat::BGRA, ImageWrapper->GetBitDepth(), ImgData))
 	{
 		UE_LOG(LogTemp, Error, TEXT("Failed to GetRaw"));
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -87,7 +87,7 @@ bool DecodeWebPToTexture(const TArray<uint8>& FileData, TArray<uint8>& ImgData, 
 	return true;
 }
 
-bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData, int32& Width, int32& Height)
+bool FImageDecoder::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData, int32& Width, int32& Height)
 {
 	TArray<uint8> FileData;
 	if (!FFileHelper::LoadFileToArray(FileData, *ImagePath))
@@ -95,7 +95,7 @@ bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData,
 		UE_LOG(LogTemp, Error, TEXT("Failed to load file: %s"), *ImagePath);
 		return false;
 	}
-	
+
 	if (GetImageDataByImageWrapper(FileData, ImgData, Width, Height))
 	{
 		return true;
@@ -107,12 +107,12 @@ bool FileManager::GetImageData(const FString& ImagePath, TArray<uint8>& ImgData,
 	return false;
 }
 
-void FileManager::Init()
+void FImageDecoder::Init()
 {
 	platformModule = FDesktopPlatformModule::Get();
 }
 
-bool FileManager::GetAllFileInFolder(FString Path, TArray<FString>& AllFileNames)
+bool FImageDecoder::GetAllFileInFolder(FString Path, TArray<FString>& AllFileNames)
 {
 	IPlatformFile& platformFile = FPlatformFileManager::Get().GetPlatformFile();
 	platformFile.FindFiles(AllFileNames, *Path, nullptr);

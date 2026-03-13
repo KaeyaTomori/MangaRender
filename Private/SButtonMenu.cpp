@@ -4,7 +4,7 @@
 #include <minwindef.h>
 #include <shobjidl_core.h>
 
-#include "DataManager.h"
+#include "MangaImageCache.h"
 #include "SMainWidget.h"
 
 SButtonMenu::SButtonMenu()
@@ -29,8 +29,8 @@ void SButtonMenu::Construct(const FArguments& InArgs)
 			{
 				AsyncTask(ENamedThreads::GameThread, []()
 				{
-					auto data = DataManager::getInstance();
-					data->OpenFolder();
+					auto ImageCache = FMangaImageCache::getInstance();
+					ImageCache->OpenFolder();
 				});
 				return FReply::Handled();
 			})

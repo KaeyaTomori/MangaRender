@@ -1,24 +1,24 @@
-#include "DataManager.h"
+#include "MangaImageCache.h"
 
-#include "Tool/FileManager.h"
+#include "Utils/FImageDecoder.h"
 
-static DataManager* gDataManager;
+static FMangaImageCache* gDataManager;
 
-DataManager* DataManager::getInstance()
+FMangaImageCache* FMangaImageCache::getInstance()
 {
 	if (gDataManager == nullptr)
 	{
-		gDataManager = new DataManager();
+		gDataManager = new FMangaImageCache();
 	}
 	return gDataManager;
 }
 
-const FString DataManager::GetFile(int index)
+const FString FMangaImageCache::GetFile(int index)
 {
 	return FileNames.IsValidIndex(index) ? FileNames[index] : "";
 }
 
-void DataManager::ClearAllFiles()
+void FMangaImageCache::ClearAllFiles()
 {
 	StopLoading();
 	FScopeLock Lock(&DataLock);
@@ -32,12 +32,12 @@ void DataManager::ClearAllFiles()
 	LoadLevel.reset();
 }
 
-TArray<FString>& DataManager::GetFileNames()
+TArray<FString>& FMangaImageCache::GetFileNames()
 {
 	return FileNames;
 }
 
-void DataManager::LoadAllImage()
+void FMangaImageCache::LoadAllImage()
 {
 	if (IsLoading.Load()) return;
 	LoadImageIndex = 0;
@@ -47,7 +47,7 @@ void DataManager::LoadAllImage()
 
 }
 
-void DataManager::LoadImageFirst(int count)
+void FMangaImageCache::LoadImageFirst(int count)
 {
 	// UE_LOG(LogTemp, Display, TEXT("LoadingImage count = %d"), count);
 	int endLoadImageIndex = LoadImageIndex + count;
@@ -59,7 +59,7 @@ void DataManager::LoadImageFirst(int count)
 	IsLoading.Store(false);
 }
 
-void DataManager::LoadImageByCount(int count)
+void FMangaImageCache::LoadImageByCount(int count)
 {
 	UE_LOG(LogTemp, Display, TEXT("LoadingImage count = %d"), count);
 	int endLoadImageIndex = LoadImageIndex + count;
@@ -71,7 +71,7 @@ void DataManager::LoadImageByCount(int count)
 	IsLoading.Store(false);
 }
 
-TSharedPtr<FSlateBrush> DataManager::GetBrush(int index)
+TSharedPtr<FSlateBrush> FMangaImageCache::GetBrush(int index)
 {
 	FScopeLock Lock(&DataLock);
 	if (!Brushes.IsValidIndex(index))
@@ -79,16 +79,16 @@ TSharedPtr<FSlateBrush> DataManager::GetBrush(int index)
 		UE_LOG(LogTemp, Display, TEXT("IsInValidIndex index = %d"), index);
 	}
 	return Brushes.IsValidIndex(index) ? Brushes[index] : nullptr;
-	
+
 	// 	UE_LOG(LogTemp, Display, TEXT("Getting brush index %d, LoadImageIndex = %d"), index, LoadImageIndex.Load());
 }
 
-const int& DataManager::GetCurrentImageIndex()
+const int& FMangaImageCache::GetCurrentImageIndex()
 {
 	return CurrentImage;
 }
 
-void DataManager::NextPage()
+void FMangaImageCache::NextPage()
 {
 	if (Page < (FileNames.Num() + ReadMode - 1) / ReadMode)
 	{
@@ -96,7 +96,7 @@ void DataManager::NextPage()
 	}
 }
 
-void DataManager::LastPage()
+void FMangaImageCache::LastPage()
 {
 	if (Page > 1)
 	{
@@ -104,52 +104,53 @@ void DataManager::LastPage()
 	}
 }
 
-bool DataManager::IsDirty()
+bool FMangaImageCache::IsDirty()
 {
 	return isDirty;
 }
 
-void DataManager::AlreadyUpdate()
+void FMangaImageCache::AlreadyUpdate()
 {
 	isDirty = false;
 }
 
-void DataManager::OpenFolder()
+void FMangaImageCache::OpenFolder()
 {
-	FString path = FileManager::PickFolder();
+	FString path = FImageDecoder::PickFolder();
 	OpenFolder(path);
-	
+
 	// LoadImageFirst(2);
 	// ImageLoader = MakeShareable(new FImageLoader(FileNames, LoadImageIndex, FileNames.Num() - LoadImageIndex));
 }
 
-void DataManager::OpenFolder(const FString& Path)
+void FMangaImageCache::OpenFolder(const FString& Path)
 {
 	ClearAllFiles();
-	FileManager::GetAllFileInFolder(Path, FileNames);
+	FImageDecoder::GetAllFileInFolder(Path, FileNames);
+	SortFileNames();
 	{
 		FScopeLock Lock(&DataLock);
 		Brushes.SetNumZeroed(FileNames.Num());
 	}
-	LoadAllImage();
+	LoadImageInStages();
 }
 
-const EReadMode& DataManager::GetReadMode()
+const EReadMode& FMangaImageCache::GetReadMode()
 {
 	return ReadMode;
 }
 
-const EShowDirection& DataManager::GetShowDirection()
+const EShowDirection& FMangaImageCache::GetShowDirection()
 {
 	return ShowDirection;
 }
 
-void DataManager::SortFileNames()
+void FMangaImageCache::SortFileNames()
 {
 	FileNames.Sort(TLess<FString>());
 }
 
-void DataManager::SwitchReadMode(EReadMode&& readMode)
+void FMangaImageCache::SwitchReadMode(EReadMode&& readMode)
 {
 	ReadMode = readMode;
 	if (ReadMode == SINGLE_PAGE)
@@ -161,7 +162,7 @@ void DataManager::SwitchReadMode(EReadMode&& readMode)
 	CurrentImage = (Page - 1) * ReadMode;
 }
 
-void DataManager::SwitchShowDirection(EShowDirection&& InShowDirection)
+void FMangaImageCache::SwitchShowDirection(EShowDirection&& InShowDirection)
 {
 	if (ReadMode == SINGLE_PAGE)
 	{
@@ -172,48 +173,59 @@ void DataManager::SwitchShowDirection(EShowDirection&& InShowDirection)
 	isDirty = true;
 }
 
-void DataManager::ChangePageTo(int page)
+void FMangaImageCache::ChangePageTo(int page)
 {
 	Page = page;
 	CurrentImage = (Page - 1) * ReadMode;
 	isDirty = true;
-	
 
-	// if (!IsLoading && CurrentImage > LoadImageIndex - LoadLevel.Value() / 2)
-	// {
-	// 	Async(EAsyncExecution::ThreadPool, [this]()
-	// 	{
-	// 		LoadImageByCount(LoadLevel++);
-	// 	});
-	// }
+	EnsureBufferLoaded();
 }
 
-void DataManager::LoadImage(FString fileName)
+void FMangaImageCache::EnsureBufferLoaded()
+{
+	if (IsLoading.Load()) return;
+
+	int loadedCount = LoadImageIndex.Load();
+	int remainingLoaded = loadedCount - CurrentImage;
+
+	// 如果剩余已加载页数不足，触发加载
+	int threshold = LoadLevel.Value();
+	if (remainingLoaded < threshold / 4 && loadedCount < FileNames.Num())
+	{
+		LoadImageInStages();
+	}
+}
+
+void FMangaImageCache::LoadImage(FString fileName)
 {
 	TArray<uint8> fileData;
 	int32 imageWidth, imageHeight;
-	FileManager::GetImageData(fileName, fileData, imageWidth, imageHeight);
+	FImageDecoder::GetImageData(fileName, fileData, imageWidth, imageHeight);
 	ImageRawDataMap.Add(fileName, MoveTemp(fileData));
 	{
 		Brushes.Add(FSlateDynamicImageBrush::CreateWithImageData(*fileName, FVector2D(imageWidth, imageHeight), ImageRawDataMap[fileName]));
 	}
 }
 
-DataManager::DataManager()
+FMangaImageCache::FMangaImageCache()
 {
 }
 
-void DataManager::StopLoading()
+void FMangaImageCache::StopLoading()
 {
 	IsLoading.Store(false);
 }
 
-void DataManager::LoadImageInStages()
+void FMangaImageCache::LoadImageInStages()
 {
+	if (IsLoading.Load()) return;
+	IsLoading.Store(true);
+
 	int count = LoadLevel++;
 	int startIndex = LoadImageIndex;
 	int endIndex = FMath::Min(startIndex + count, FileNames.Num());
-
+	
 	Async(EAsyncExecution::ThreadPool, [this, startIndex, endIndex]() {
 		for (int i = startIndex; i < endIndex; ++i)
 		{
@@ -221,25 +233,18 @@ void DataManager::LoadImageInStages()
 			LoadImageAtIndex(i);
 		}
 		LoadImageIndex = endIndex;
-		if (LoadImageIndex < FileNames.Num())
-		{
-			LoadImageInStages();
-		}
-		else
-		{
-			IsLoading.Store(false);
-		}
+		IsLoading.Store(false);
 	});
 }
 
-void DataManager::LoadImageAtIndex(int index)
+void FMangaImageCache::LoadImageAtIndex(int index)
 {
 	if (!FileNames.IsValidIndex(index)) return;
 
 	const FString& fileName = FileNames[index];
 	TArray<uint8> fileData;
 	int32 imageWidth, imageHeight;
-	if (!FileManager::GetImageData(fileName, fileData, imageWidth, imageHeight)) return;
+	if (!FImageDecoder::GetImageData(fileName, fileData, imageWidth, imageHeight)) return;
 
 	AsyncTask(ENamedThreads::GameThread, [this, fileName, fileData = MoveTemp(fileData), imageWidth, imageHeight, index]() mutable {
 		FScopeLock Lock(&DataLock);

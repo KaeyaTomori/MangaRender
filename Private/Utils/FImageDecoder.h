@@ -1,6 +1,6 @@
 #pragma once
 
-class FileManager
+class FImageDecoder
 {
 public:
 	static FString PickFolder();

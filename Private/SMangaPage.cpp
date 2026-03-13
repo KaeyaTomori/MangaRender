@@ -1,40 +1,40 @@
-#include "SImageWidget.h"
+#include "SMangaPage.h"
 
-SImageWidget::SImageWidget()
+SMangaPage::SMangaPage()
 {
-	data = DataManager::getInstance();
+	ImageCache = FMangaImageCache::getInstance();
 }
 
-SImageWidget::~SImageWidget()
+SMangaPage::~SMangaPage()
 {
 }
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
-void SImageWidget::Construct(const FArguments& InArgs)
+void SMangaPage::Construct(const FArguments& InArgs)
 {
 	ImageAlignment = InArgs._ImageAlignment;
 }
 
-void SImageWidget::update(int showIndex, FVector2D imageOffset, float zoomFactor, FVector2D renderPivot)
+void SMangaPage::update(int showIndex, FVector2D imageOffset, float zoomFactor, FVector2D renderPivot)
 {
-	Brush = data->GetBrush(showIndex);
+	Brush = ImageCache->GetBrush(showIndex);
 	ImageOffset = imageOffset;
 	ZoomFactor = zoomFactor;
 	RenderPivot = renderPivot;
 }
 
-void SImageWidget::UpdateOffset(FVector2D imageOffset)
+void SMangaPage::UpdateOffset(FVector2D imageOffset)
 {
 	ImageOffset = imageOffset;
 }
 
-void SImageWidget::UpdateZoomFactor(float zoomFactor, FVector2D renderPivot)
+void SMangaPage::UpdateZoomFactor(float zoomFactor, FVector2D renderPivot)
 {
 	ZoomFactor = zoomFactor;
 	RenderPivot = renderPivot;
 }
 
-int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+int32 SMangaPage::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
 	FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const
 {
 	if (Brush.IsValid())
@@ -63,7 +63,7 @@ int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 			pivot = FVector2D(0.5f, 0.5f);
 			break;
 		}
-		
+
 		FSlateDrawElement::MakeBox(
 			OutDrawElements,
 			LayerId,
@@ -81,7 +81,7 @@ int32 SImageWidget::OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeo
 	return LayerId;
 }
 
-FVector2D SImageWidget::ComputeDesiredSize(float) const
+FVector2D SMangaPage::ComputeDesiredSize(float) const
 {
 	return Brush.IsValid() ? Brush.Get()->ImageSize : FVector2D(0, 0);
 }
