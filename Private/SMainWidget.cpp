@@ -152,6 +152,11 @@ FReply SMainWidget::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointe
 	{
 		return FReply::Handled();
 	}
+	else if (MouseEvent.GetEffectingButton() == EKeys::MiddleMouseButton)
+	{
+		bShowThumbnailSidebar = !bShowThumbnailSidebar;
+		return FReply::Handled();
+	}
 	else if (MouseEvent.GetEffectingButton() == EKeys::ThumbMouseButton)
 	{
 		LastPage();

@@ -69,5 +69,5 @@ private:
 	FMangaImageCache* ImageCache;
 
 	bool bIsDragAccept = false;
-	bool bShowThumbnailSidebar = true;
+	bool bShowThumbnailSidebar = false;
 };
