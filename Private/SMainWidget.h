@@ -44,6 +44,12 @@ private:
 	void NextPage();
 	void LastPage();
 	void SyncThumbnailSelection();
+
+	// 获取当前页号
+	int32 GetCurrentPage() const;
+
+	// 移动窗口到当前页并加载未加载的图片
+	void MoveWindowToCurrentPage();
 	
 private:
 	const float WheelSpeed = 0.1f;

@@ -30,6 +30,14 @@ void FMangaImageCache::ClearAllFiles()
 	Page = DefaultPage;
 	isDirty = true;
 	LoadLevel.reset();
+
+	// 清空已加载索引记录
+	{
+		FScopeLock IndicesLock(&LoadedIndicesLock);
+		LoadedIndices.Empty();
+	}
+	WindowCenter = 0;
+	bFolderChanged = true;
 }
 
 TArray<FString>& FMangaImageCache::GetFileNames()
@@ -76,7 +84,7 @@ const int& FMangaImageCache::GetCurrentImageIndex()
 
 void FMangaImageCache::NextPage()
 {
-	if (Page < (FileNames.Num() - 1 + ReadMode - 1) / ReadMode)
+	if (Page < (FileNames.Num() + ReadMode - 1) / ReadMode - 1)
 	{
 		ChangePageTo(Page + 1);
 	}
@@ -198,7 +206,7 @@ void FMangaImageCache::LoadImageInStages()
 	int count = LoadLevel++;
 	int startIndex = LoadImageIndex;
 	int endIndex = FMath::Min(startIndex + count, FileNames.Num());
-	
+
 	Async(EAsyncExecution::ThreadPool, [this, startIndex, endIndex]() {
 		for (int i = startIndex; i < endIndex; ++i)
 		{
@@ -210,9 +218,93 @@ void FMangaImageCache::LoadImageInStages()
 	});
 }
 
+void FMangaImageCache::MoveWindowTo(int32 CenterPage)
+{
+	int32 TotalPages = GetTotalPageCount();
+	if (TotalPages <= 0) return;
+
+	int32 NewCenter = FMath::Clamp(CenterPage, 0, TotalPages - 1);
+	if (NewCenter == WindowCenter) return;
+
+	WindowCenter = NewCenter;
+
+	// 获取窗口内未加载的图片索引
+	TArray<int32> UnloadedIndices = GetUnloadedIndicesInWindow(WindowCenter);
+	if (UnloadedIndices.Num() == 0) return;
+
+	// 使用类似 LoadImageInStages 的分批加载
+	Async(EAsyncExecution::ThreadPool, [this, UnloadedIndices]() {
+		int32 BatchSize = LoadLevel.Value();
+		int32 ProcessedCount = 0;
+
+		for (int32 ImageIndex : UnloadedIndices)
+		{
+			LoadImageAtIndex(ImageIndex);
+
+			ProcessedCount++;
+
+			// 每批处理完后稍微停顿，避免阻塞
+			if (ProcessedCount % BatchSize == 0)
+			{
+				FPlatformProcess::Sleep(0.001f);
+			}
+		}
+	});
+}
+
+TArray<int32> FMangaImageCache::GetUnloadedIndicesInWindow(int32 CenterPage) const
+{
+	TArray<int32> Result;
+
+	int32 TotalPages = GetTotalPageCount();
+	if (TotalPages <= 0) return Result;
+
+	// 计算窗口范围（页号转图片索引）
+	int32 PageStart = FMath::Max(0, CenterPage - WindowSize);
+	int32 PageEnd = FMath::Min(TotalPages - 1, CenterPage + WindowSize);
+
+	int32 ImageStart = PageStart * static_cast<int32>(ReadMode);
+	int32 ImageEnd = FMath::Min((PageEnd + 1) * static_cast<int32>(ReadMode), FileNames.Num());
+
+	FScopeLock Lock(const_cast<FCriticalSection*>(&LoadedIndicesLock));
+
+	for (int32 i = ImageStart; i < ImageEnd; ++i)
+	{
+		if (!LoadedIndices.Contains(i))
+		{
+			Result.Add(i);
+		}
+	}
+
+	return Result;
+}
+
+bool FMangaImageCache::IsImageLoaded(int32 Index) const
+{
+	if (!FileNames.IsValidIndex(Index)) return false;
+
+	FScopeLock Lock(const_cast<FCriticalSection*>(&LoadedIndicesLock));
+	return LoadedIndices.Contains(Index);
+}
+
+int32 FMangaImageCache::GetTotalPageCount() const
+{
+	if (FileNames.Num() == 0) return 0;
+	return (FileNames.Num() + static_cast<int32>(ReadMode) - 1) / static_cast<int32>(ReadMode);
+}
+
 void FMangaImageCache::LoadImageAtIndex(int index)
 {
 	if (!FileNames.IsValidIndex(index)) return;
+
+	// 检查是否已加载
+	{
+		FScopeLock Lock(&LoadedIndicesLock);
+		if (LoadedIndices.Contains(index))
+		{
+			return;
+		}
+	}
 
 	const FString& fileName = FileNames[index];
 	TArray<uint8> fileData;
@@ -224,6 +316,16 @@ void FMangaImageCache::LoadImageAtIndex(int index)
 		ImageRawDataMap.Add(fileName, MoveTemp(fileData));
 		TSharedPtr<FSlateBrush> brush = FSlateDynamicImageBrush::CreateWithImageData(*fileName, FVector2D(imageWidth, imageHeight), ImageRawDataMap[fileName]);
 		Brushes[index] = brush;
+
+		// 标记为已加载
+		{
+			FScopeLock IndicesLock(&LoadedIndicesLock);
+			LoadedIndices.Add(index);
+		}
+
+		// 广播加载完成
+		OnImageLoaded.Broadcast(index);
+
 		isDirty = true;
 	});
 }

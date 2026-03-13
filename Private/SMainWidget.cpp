@@ -344,29 +344,59 @@ void SMainWidget::Update()
 		updateImageWidget(imageWidgetL, FirstImageToShow + ImageCache->GetShowDirection());
 		updateImageWidget(imageWidgetR, FirstImageToShow + (ImageCache->GetShowDirection() ^ 1));
 
+		// 如果是新文件夹，刷新侧边栏列表
+		if (ImageCache->IsFolderChanged())
+		{
+			ImageCache->ClearFolderChangedFlag();
+			if (ThumbnailSidebar.IsValid())
+			{
+				ThumbnailSidebar->RefreshThumbnails();
+			}
+		}
+
+		// 移动窗口到当前页，加载窗口内未加载的图片
+		MoveWindowToCurrentPage();
+
 		// 同步当前页到侧边栏
-		// if (ThumbnailSidebar.IsValid())
-		// {
-		// 	int32 CurrentPage = ImageCache->GetCurrentImageIndex() / ImageCache->GetReadMode() + 1;
-		// 	ThumbnailSidebar->SetSelectedPage(CurrentPage - 1);
-		// }
+		if (ThumbnailSidebar.IsValid())
+		{
+			int32 CurrentPage = GetCurrentPage();
+			ThumbnailSidebar->SetSelectedPage(CurrentPage);
+			ThumbnailSidebar->ScrollToThumbnail(CurrentPage);
+		}
 	}
+}
+
+int32 SMainWidget::GetCurrentPage() const
+{
+	return ImageCache->GetCurrentImageIndex() / static_cast<int32>(ImageCache->GetReadMode());
+}
+
+void SMainWidget::MoveWindowToCurrentPage()
+{
+	int32 CurrentPage = GetCurrentPage();
+	ImageCache->MoveWindowTo(CurrentPage);
 }
 
 void SMainWidget::NextPage()
 {
 	ImageCache->NextPage();
+	MoveWindowToCurrentPage();
 }
 
 void SMainWidget::LastPage()
 {
 	ImageCache->LastPage();
+	MoveWindowToCurrentPage();
 }
 
 void SMainWidget::OnThumbnailSelected(int32 PageIndex)
 {
 	// 直接跳转到指定页
-	ImageCache->ChangePageTo(ImageCache->PictrueIndexToPage(PageIndex));
+	ImageCache->ChangePageTo(PageIndex);
+
+	// 移动窗口到新页，加载窗口内未加载的图片
+	MoveWindowToCurrentPage();
 
 	// 更新侧边栏选中状态
 	if (ThumbnailSidebar.IsValid())
@@ -381,7 +411,7 @@ void SMainWidget::SyncThumbnailSelection()
 	if (!ThumbnailSidebar.IsValid())
 		return;
 
-	int32 CurrentPage = ImageCache->GetCurrentImageIndex() / ImageCache->GetReadMode();
+	int32 CurrentPage = GetCurrentPage();
 	ThumbnailSidebar->SetSelectedPage(CurrentPage);
 	ThumbnailSidebar->ScrollToThumbnail(CurrentPage);
 }

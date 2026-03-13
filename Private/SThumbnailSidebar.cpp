@@ -10,6 +10,11 @@
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Layout/SSpacer.h"
 
+SThumbnailSidebar::~SThumbnailSidebar()
+{
+	UnbindFromImageCache();
+}
+
 void SThumbnailSidebar::Construct(const FArguments& InArgs)
 {
 	OnThumbnailSelected = InArgs._OnThumbnailSelected;
@@ -47,8 +52,28 @@ void SThumbnailSidebar::Construct(const FArguments& InArgs)
 
 void SThumbnailSidebar::SetImageCache(FMangaImageCache* InCache)
 {
+	UnbindFromImageCache();
 	ImageCache = InCache;
 	RefreshThumbnails();
+	BindToImageCache();
+}
+
+void SThumbnailSidebar::BindToImageCache()
+{
+	if (ImageCache)
+	{
+		OnImageLoadedHandle = ImageCache->OnImageLoaded.AddSP(
+			SharedThis(this), &SThumbnailSidebar::OnImageLoaded);
+	}
+}
+
+void SThumbnailSidebar::UnbindFromImageCache()
+{
+	if (ImageCache && OnImageLoadedHandle.IsValid())
+	{
+		ImageCache->OnImageLoaded.Remove(OnImageLoadedHandle);
+		OnImageLoadedHandle.Reset();
+	}
 }
 
 void SThumbnailSidebar::RefreshThumbnails()
@@ -56,6 +81,7 @@ void SThumbnailSidebar::RefreshThumbnails()
 	ThumbnailBrushes.Empty();
 	ThumbnailWidgets.Empty();
 	ThumbnailContainer->ClearChildren();
+	SelectedPageIndex = 0;
 
 	if (!ImageCache)
 	{
@@ -63,13 +89,17 @@ void SThumbnailSidebar::RefreshThumbnails()
 	}
 
 	RebuildThumbnailList();
-	GenerateThumbnailsAsync();
+
+	// 尝试刷新已加载的图片缩略图
+	for (int32 i = 0; i < ThumbnailWidgets.Num(); ++i)
+	{
+		TryRefreshThumbnail(i);
+	}
 }
 
 void SThumbnailSidebar::RebuildThumbnailList()
 {
-	TArray<FString>& FileNames = ImageCache->GetFileNames();
-	int32 PageCount = FileNames.Num();
+	int32 PageCount = ImageCache->GetTotalPageCount();
 
 	for (int32 i = 0; i < PageCount; ++i)
 	{
@@ -158,7 +188,8 @@ const FSlateBrush* SThumbnailSidebar::GetThumbnailBrush(int32 PageIndex) const
 	}
 
 	// 返回默认占位图
-	return FCoreStyle::Get().GetBrush("Checkerboard");
+	// return FCoreStyle::Get().GetBrush("Checkerboard");
+	return nullptr;
 }
 
 FSlateColor SThumbnailSidebar::GetSelectionColor(int32 PageIndex) const
@@ -202,74 +233,79 @@ void SThumbnailSidebar::ScrollToThumbnail(int32 PageIndex)
 
 void SThumbnailSidebar::GenerateThumbnailsAsync()
 {
-	if (bIsGeneratingThumbnails.Load())
+	// 不再使用：缩略图现在通过 OnImageLoaded 委托动态加载
+	// 保留此方法用于兼容性，但不做任何操作
+}
+
+void SThumbnailSidebar::OnImageLoaded(int32 ImageIndex)
+{
+	if (!ImageCache) return;
+
+	// 图片索引转换为页号
+	int32 PageIndex = ImageCache->PictrueIndexToPage(ImageIndex);
+
+	// 在主线程刷新对应缩略图
+	AsyncTask(ENamedThreads::GameThread, [this, PageIndex]()
 	{
-		bIsGeneratingThumbnails.Store(false);
-		// 等待之前的生成任务完成
-		FPlatformProcess::Sleep(0.01f);
+		RefreshThumbnailAt(PageIndex);
+	});
+}
+
+void SThumbnailSidebar::TryRefreshThumbnail(int32 PageIndex)
+{
+	if (!ImageCache || !ThumbnailWidgets.IsValidIndex(PageIndex))
+	{
+		return;
 	}
 
-	bIsGeneratingThumbnails.Store(true);
+	// 计算该页对应的图片索引
+	int32 ImageIndex = PageIndex * static_cast<int32>(ImageCache->GetReadMode());
 
-	Async(EAsyncExecution::ThreadPool, [this]()
+	// 检查图片是否已加载
+	if (ImageCache->IsImageLoaded(ImageIndex))
 	{
-		TArray<FString>& FileNames = ImageCache->GetFileNames();
+		RefreshThumbnailAt(PageIndex);
+	}
+}
 
-		for (int32 i = 0; i < FileNames.Num() && bIsGeneratingThumbnails.Load(); ++i)
+void SThumbnailSidebar::RefreshThumbnailAt(int32 PageIndex)
+{
+	if (!ImageCache || !ThumbnailWidgets.IsValidIndex(PageIndex))
+	{
+		return;
+	}
+
+	// 计算该页对应的图片索引（取该页的第一张图）
+	int32 ImageIndex = PageIndex * static_cast<int32>(ImageCache->GetReadMode());
+
+	TArray<FString>& FileNames = ImageCache->GetFileNames();
+	if (!FileNames.IsValidIndex(ImageIndex))
+	{
+		return;
+	}
+
+	// 尝试获取已加载的图片数据
+	const FString& FilePath = FileNames[ImageIndex];
+	TArray<uint8> FileData;
+
+	if (ImageCache->GetImageRawData(FilePath, FileData))
+	{
+		// 创建缩略图Brush
+		TSharedPtr<FSlateDynamicImageBrush> NewBrush = FSlateDynamicImageBrush::CreateWithImageData(
+			*FilePath,
+			FVector2D(ThumbnailWidth, ThumbnailHeight),
+			FileData
+		);
+
 		{
-			const FString& FilePath = FileNames[i];
-
-			// 加载图片数据
-			TArray<uint8> FileData;
-			
 			FScopeLock Lock(&ThumbnailLock);
-			TSharedPtr<FSlateDynamicImageBrush> Brush = nullptr;
-			if (FMangaImageCache::GetInstance()->GetImageRawData(FilePath, FileData))
-			{
-				Brush = FSlateDynamicImageBrush::CreateWithImageData(
-					*FilePath,
-					FVector2D(ThumbnailWidth, ThumbnailHeight),
-					FileData
-				);
-			}
-			
-			// int32 OrigWidth, OrigHeight;
-			//
-			// if (!FImageDecoder::GetImageData(FilePath, FileData, OrigWidth, OrigHeight))
-			// {
-			// 	continue;
-			// }
-			//
-			// // 计算缩略图尺寸（保持宽高比）
-			// float ScaleX = ThumbnailWidth / OrigWidth;
-			// float ScaleY = ThumbnailHeight / OrigHeight;
-			// float Scale = FMath::Min(ScaleX, ScaleY);
-			//
-			// int32 ThumbWidth = FMath::RoundToInt(OrigWidth * Scale);
-			// int32 ThumbHeight = FMath::RoundToInt(OrigHeight * Scale);
-			//
-			// FImageDecoder::GetImageData(FilePath, FileData, OrigWidth, OrigHeight);
-			//
-			// // 创建缩略图Brush
-			// FScopeLock Lock(&ThumbnailLock);
-			// TSharedPtr<FSlateDynamicImageBrush> Brush =FSlateDynamicImageBrush::CreateWithImageData(
-			// 			*FilePath,
-			// 			FVector2D(ThumbWidth, ThumbHeight),
-			// 			FileData
-			// 		);
-			
-			ThumbnailBrushes.Add(i, Brush);
-
-			// 在主线程刷新UI
-			AsyncTask(ENamedThreads::GameThread, [this, i]()
-			{
-				if (ThumbnailWidgets.IsValidIndex(i) && ThumbnailWidgets[i].IsValid())
-				{
-					ThumbnailWidgets[i]->Invalidate(EInvalidateWidget::PaintAndVolatility);
-				}
-			});
+			ThumbnailBrushes.Add(PageIndex, NewBrush);
 		}
 
-		bIsGeneratingThumbnails.Store(false);
-	});
+		// 只刷新该缩略图的UI
+		if (ThumbnailWidgets[PageIndex].IsValid())
+		{
+			ThumbnailWidgets[PageIndex]->Invalidate(EInvalidateWidget::PaintAndVolatility);
+		}
+	}
 }
