@@ -101,6 +101,22 @@ void SThumbnailSidebar::RebuildThumbnailList()
 TSharedRef<SWidget> SThumbnailSidebar::CreateThumbnailItem(int32 PageIndex)
 {
 	TSharedPtr<SBorder> ItemBorder;
+	FString PageLabel = FString::Printf(TEXT("%d"), PageIndex + 1);
+
+	if (ImageCache)
+	{
+		const int32 ReadMode = static_cast<int32>(ImageCache->GetReadMode());
+		if (ReadMode > 1)
+		{
+			const int32 TotalImages = ImageCache->GetFileNames().Num();
+			const int32 StartNumber = PageIndex * ReadMode + 1;
+			const int32 EndNumber = FMath::Min((PageIndex + 1) * ReadMode, TotalImages);
+
+			PageLabel = (StartNumber < EndNumber)
+				? FString::Printf(TEXT("%d-%d"), StartNumber, EndNumber)
+				: FString::Printf(TEXT("%d"), StartNumber);
+		}
+	}
 
 	TSharedRef<SWidget> ItemWidget = SNew(SBox)
 		.WidthOverride(ThumbnailWidth + 20.0f)
@@ -134,7 +150,7 @@ TSharedRef<SWidget> SThumbnailSidebar::CreateThumbnailItem(int32 PageIndex)
 			[
 				bShowPageNumber
 				? SNew(STextBlock)
-					.Text(FText::FromString(FString::Printf(TEXT("%d"), PageIndex + 1)))
+					.Text(FText::FromString(PageLabel))
 					.Font(FCoreStyle::GetDefaultFontStyle("Regular", 8))
 					.ColorAndOpacity(FLinearColor::White)
 				: SNullWidget::NullWidget
