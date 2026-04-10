@@ -166,7 +166,14 @@ FReply SThumbnailSidebar::OnThumbnailClicked(int32 PageIndex)
 
 const FSlateBrush* SThumbnailSidebar::GetThumbnailBrush(int32 PageIndex) const
 {
-	return FMangaImageCache::GetInstance()->GetBrush(PageIndex).Get();
+	if (!ImageCache)
+	{
+		return nullptr;
+	}
+
+	const int32 ReadMode = static_cast<int32>(ImageCache->GetReadMode());
+	const int32 ImageIndex = PageIndex * ReadMode;
+	return ImageCache->GetBrush(ImageIndex).Get();
 }
 
 FSlateColor SThumbnailSidebar::GetSelectionColor(int32 PageIndex) const

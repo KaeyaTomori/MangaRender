@@ -303,7 +303,7 @@ void FMangaImageCache::LoadImageAtIndex(int index)
 	{
 		FScopeLock Lock(&LoadedIndicesLock);
 		if (LoadedIndices.Contains(index)) return;
-		UE_LOG(LogTemp, Display, TEXT("LoadImageAtIndex index = %d"), index);
+		// UE_LOG(LogTemp, Display, TEXT("LoadImageAtIndex index = %d"), index);
 		// 标记为已加载
 		LoadedIndices.Add(index);
 	}

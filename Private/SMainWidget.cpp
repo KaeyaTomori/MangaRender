@@ -29,6 +29,13 @@ void SMainWidget::OnReadModeChanged()
 		ImageCache->SwitchReadMode(EReadMode::SINGLE_PAGE);
 	}
 	Construct(FArguments());
+
+	// Read mode changes page count; refresh sidebar and sync selection.
+	if (ThumbnailSidebar.IsValid())
+	{
+		ThumbnailSidebar->RefreshThumbnails();
+		SyncThumbnailSelection();
+	}
 }
 
 void SMainWidget::OnShowDirectionChanged()
